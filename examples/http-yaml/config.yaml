@@ -1,24 +1,24 @@
-# 简化的配置文件
-app:
-    name: "示例应用"
+# 简化的配置文件 - 使用新的字段名称
+application:
+    app_name: "示例应用"
     version: "1.0.0"
-    environment: "development"
+    env: "development"
 
 server:
-    host: "localhost"
+    bind_address: "localhost"
     port: 8080
-    debug: true
+    debug_mode: true
 
 database:
     primary:
         host: "localhost"
         port: 5432
-        name: "myapp"
-        url: "postgres://user:pass@localhost:5432/myapp"
-    replicas:
+        database_name: "myapp"
+        connection_url: "postgres://user:pass@localhost:5432/myapp"
+    read_replicas:
         - "postgres://user:pass@slave1:5432/myapp"
 
-features:
+feature_flags:
     - "auth"
     - "logging"
     - "metrics"

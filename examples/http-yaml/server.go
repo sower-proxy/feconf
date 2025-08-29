@@ -1,42 +1,18 @@
 package main
 
 import (
+	_ "embed"
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"time"
 )
 
+//go:embed config.yaml
 var configData []byte
 
 // runServer 运行简化的配置服务器
 func runServer() {
-	// 读取配置文件
-	data, err := os.ReadFile("config.yaml")
-	if err != nil {
-		log.Printf("读取配置文件失败: %v", err)
-		// 创建默认配置
-		configData = []byte(`app:
-  name: "示例应用"
-  version: "1.0.0"
-  environment: "development"
-server:
-  host: "localhost"
-  port: 8080
-  debug: true
-database:
-  primary:
-    host: "localhost"
-    port: 5432
-    name: "myapp"
-    url: "postgres://user:pass@localhost:5432/myapp"
-  replicas: []
-features: ["auth", "logging", "metrics"]`)
-	} else {
-		configData = data
-	}
-
 	// 设置路由
 	http.HandleFunc("/config.yaml", handleConfig)
 	http.HandleFunc("/config-auth.yaml", handleConfigAuth)
@@ -102,22 +78,22 @@ func handleConfigAuthSSE(w http.ResponseWriter, r *http.Request) {
 		select {
 		case <-ticker.C:
 			// 模拟配置更新
-			updatedConfig := fmt.Sprintf(`app:
-  name: "示例应用"
+			updatedConfig := fmt.Sprintf(`application:
+  app_name: "示例应用"
   version: "1.0.%d"
-  environment: "development"
+  env: "development"
 server:
-  host: "localhost"
+  bind_address: "localhost"
   port: 8080
-  debug: true
+  debug_mode: true
 database:
   primary:
     host: "localhost"
     port: 5432
-    name: "myapp"
-    url: "postgres://user:pass@localhost:5432/myapp"
-  replicas: []
-features: ["auth", "logging", "metrics", "update-%d"]`, i, i)
+    database_name: "myapp"
+    connection_url: "postgres://user:pass@localhost:5432/myapp"
+  read_replicas: []
+feature_flags: ["auth", "logging", "metrics", "update-%d"]`, i, i)
 
 			fmt.Fprintf(w, "data: %s\n\n", updatedConfig)
 			if flusher, ok := w.(http.Flusher); ok {
@@ -139,26 +115,26 @@ func simulateConfigUpdates() {
 
 		// 更新内存中的配置数据
 		configData = fmt.Appendf(nil, `# 自动更新的配置 %d
-app:
-  name: "示例应用"
+application:
+  app_name: "示例应用"
   version: "1.0.%d"
-  environment: "development"
+  env: "development"
 
 server:
-  host: "localhost"
+  bind_address: "localhost"
   port: 8080
-  debug: true
+  debug_mode: true
 
 database:
   primary:
     host: "localhost"
     port: 5432
-    name: "myapp"
-    url: "postgres://user:pass@localhost:5432/myapp"
-  replicas:
+    database_name: "myapp"
+    connection_url: "postgres://user:pass@localhost:5432/myapp"
+  read_replicas:
     - "postgres://user:pass@slave1:5432/myapp"
 
-features:
+feature_flags:
   - "auth"
   - "logging"
   - "metrics"

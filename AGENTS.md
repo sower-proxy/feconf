@@ -20,11 +20,11 @@
 ├──── toml
 ├──── xml
 ├──── ini
-├──── env
 ├──── hcl
 ├── examples # 给定一些使用示例，包括几种 reader 的使用方法，包括示例的配置文件
 ├──── file-json # 文件 + JSON 配置示例
 ├──── http-yaml # HTTP + YAML 配置示例，包括基础认证和 SSE 实时更新
+├──── redis-ini # Redis + INI 配置示例，包括订阅实时更新
 ├── parser.go # mapstructure 相关的映射器的实现
 └── conf.go etc # 封装好一个 Conf 实例，提供统一、简洁的配置和使用方法定义
 
