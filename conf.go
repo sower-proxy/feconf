@@ -98,7 +98,7 @@ func (c *ConfOpt[T]) decode() error {
 	}
 
 	var parsedData map[string]any
-	if err := c.decoder.Decode(c.rawData, &parsedData); err != nil {
+	if err := c.decoder.Unmarshal(c.rawData, &parsedData); err != nil {
 		return fmt.Errorf("failed to decode configuration data: %w", err)
 	}
 

@@ -30,8 +30,8 @@ func NewJSONDecoder() *JSONDecoder {
 	return &JSONDecoder{}
 }
 
-// Decode decodes JSON data to target structure
-func (d *JSONDecoder) Decode(data []byte, v any) error {
+// Unmarshal decodes JSON data to target structure
+func (d *JSONDecoder) Unmarshal(data []byte, v any) error {
 	if len(data) == 0 {
 		return fmt.Errorf("empty JSON data")
 	}

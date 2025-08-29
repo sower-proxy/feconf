@@ -13,7 +13,7 @@ func TestJSONDecoder_Decode(t *testing.T) {
 		data := []byte(`{"name": "test", "value": 123, "enabled": true}`)
 		var result map[string]any
 
-		err := decoder.Decode(data, &result)
+		err := decoder.Unmarshal(data, &result)
 		if err != nil {
 			t.Fatalf("expected no error, got: %v", err)
 		}
@@ -33,7 +33,7 @@ func TestJSONDecoder_Decode(t *testing.T) {
 		data := []byte(`[1, 2, 3, "test"]`)
 		var result []any
 
-		err := decoder.Decode(data, &result)
+		err := decoder.Unmarshal(data, &result)
 		if err != nil {
 			t.Fatalf("expected no error, got: %v", err)
 		}
@@ -56,7 +56,7 @@ func TestJSONDecoder_Decode(t *testing.T) {
 		data := []byte(`{"name": "test", "value": 123, "enabled": true}`)
 		var result Config
 
-		err := decoder.Decode(data, &result)
+		err := decoder.Unmarshal(data, &result)
 		if err != nil {
 			t.Fatalf("expected no error, got: %v", err)
 		}
@@ -76,7 +76,7 @@ func TestJSONDecoder_Decode(t *testing.T) {
 		data := []byte("")
 		var result map[string]any
 
-		err := decoder.Decode(data, &result)
+		err := decoder.Unmarshal(data, &result)
 		if err == nil {
 			t.Fatal("expected error for empty data")
 		}
@@ -85,7 +85,7 @@ func TestJSONDecoder_Decode(t *testing.T) {
 	t.Run("nil target", func(t *testing.T) {
 		data := []byte(`{"name": "test"}`)
 
-		err := decoder.Decode(data, nil)
+		err := decoder.Unmarshal(data, nil)
 		if err == nil {
 			t.Fatal("expected error for nil target")
 		}
@@ -95,7 +95,7 @@ func TestJSONDecoder_Decode(t *testing.T) {
 		data := []byte(`{"name": "test", "value":}`)
 		var result map[string]any
 
-		err := decoder.Decode(data, &result)
+		err := decoder.Unmarshal(data, &result)
 		if err == nil {
 			t.Fatal("expected error for invalid JSON")
 		}
