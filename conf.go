@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"path/filepath"
+	"time"
 
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/sower-proxy/conf/decoder"
@@ -34,10 +35,9 @@ func (c *ConfOpt[T]) parseUri() (err error) {
 		return fmt.Errorf("failed to parse URI: %w", err)
 	}
 
-	var exists bool
-	c.reader, exists = reader.GetReader(reader.Scheme(c.parsedURL.Scheme))
-	if !exists {
-		return fmt.Errorf("no reader registered for scheme: %s", c.parsedURL.Scheme)
+	c.reader, err = reader.NewReader(c.parsedURL.String())
+	if err != nil {
+		return fmt.Errorf("failed to get reader for URI: %w", err)
 	}
 
 	format, err := c.getFormat()
@@ -75,19 +75,16 @@ func (c *ConfOpt[T]) readData(ctx context.Context) error {
 		return fmt.Errorf("reader not initialized")
 	}
 
-	event, err := c.reader.Read(ctx)
+	data, err := c.reader.Read(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to read configuration: %w", err)
 	}
 
-	if !event.IsValid() {
-		if event.Error != nil {
-			return fmt.Errorf("configuration read error: %w", event.Error)
-		}
-		return fmt.Errorf("invalid configuration data")
+	if len(data) == 0 {
+		return fmt.Errorf("empty configuration data")
 	}
 
-	c.rawData = event.Data
+	c.rawData = data
 	return nil
 }
 
@@ -109,7 +106,8 @@ func (c *ConfOpt[T]) decode() error {
 	return nil
 }
 
-func (c *ConfOpt[T]) Load(ctx context.Context) (*T, error) {
+func (c *ConfOpt[T]) Load() (*T, error) { return c.LoadCtx(context.Background()) }
+func (c *ConfOpt[T]) LoadCtx(ctx context.Context) (*T, error) {
 	if err := c.parseUri(); err != nil {
 		return nil, fmt.Errorf("failed to parse URI: %w", err)
 	}
@@ -136,9 +134,25 @@ func (c *ConfOpt[T]) Load(ctx context.Context) (*T, error) {
 	return &result, nil
 }
 
-func (c *ConfOpt[T]) Subscribe(ctx context.Context) (<-chan *T, error) {
-	if err := c.parseUri(); err != nil {
-		return nil, fmt.Errorf("failed to parse URI: %w", err)
+type ConfEvent[T any] struct {
+	SourceURI string    `json:"source_uri"`
+	Timestamp time.Time `json:"timestamp"`
+	Error     error     `json:"error,omitempty"`
+	Config    *T        `json:"config,omitempty"`
+}
+
+func (c *ConfEvent[T]) IsValid() bool {
+	return c != nil && c.Error == nil && c.Config != nil
+}
+
+func (c *ConfOpt[T]) Subscribe() (<-chan *ConfEvent[T], error) {
+	return c.SubscribeCtx(context.Background())
+}
+
+func (c *ConfOpt[T]) SubscribeCtx(ctx context.Context) (<-chan *ConfEvent[T], error) {
+	initialResult, err := c.Load()
+	if err != nil {
+		return nil, err
 	}
 
 	eventChan, err := c.reader.Subscribe(ctx)
@@ -146,10 +160,19 @@ func (c *ConfOpt[T]) Subscribe(ctx context.Context) (<-chan *T, error) {
 		return nil, fmt.Errorf("failed to subscribe to configuration changes: %w", err)
 	}
 
-	configChan := make(chan *T, 1)
+	confEventChan := make(chan *ConfEvent[T], 1)
+
+	// Send initial configuration event
+	initialEvent := &ConfEvent[T]{
+		SourceURI: c.uri,
+		Timestamp: time.Now(),
+		Error:     nil,
+		Config:    initialResult,
+	}
+	confEventChan <- initialEvent
 
 	go func() {
-		defer close(configChan)
+		defer close(confEventChan)
 
 		for {
 			select {
@@ -159,32 +182,46 @@ func (c *ConfOpt[T]) Subscribe(ctx context.Context) (<-chan *T, error) {
 				if !ok {
 					return
 				}
-				if !event.IsValid() {
-					continue
+
+				confEvent := &ConfEvent[T]{
+					SourceURI: event.SourceURI,
+					Timestamp: event.Timestamp,
+					Error:     event.Error,
 				}
 
-				c.rawData = event.Data
-				if err := c.decode(); err != nil {
-					continue
+				if event.IsValid() {
+					c.rawData = event.Data
+					if err := c.decode(); err != nil {
+						confEvent.Error = err
+						confEventChan <- confEvent
+						continue
+					}
+
+					var result T
+					c.ParserConf.Result = &result
+					mapDecoder, err := mapstructure.NewDecoder(&c.ParserConf)
+					if err != nil {
+						confEvent.Error = err
+						confEventChan <- confEvent
+						continue
+					}
+
+					if err := mapDecoder.Decode(c.parsedData); err != nil {
+						confEvent.Error = err
+						confEventChan <- confEvent
+						continue
+					}
+
+					confEvent.Config = &result
+					confEvent.Error = nil
 				}
 
-				var result T
-				c.ParserConf.Result = &result
-				mapDecoder, err := mapstructure.NewDecoder(&c.ParserConf)
-				if err != nil {
-					continue
-				}
-
-				if err := mapDecoder.Decode(c.parsedData); err != nil {
-					continue
-				}
-
-				configChan <- &result
+				confEventChan <- confEvent
 			}
 		}
 	}()
 
-	return configChan, nil
+	return confEventChan, nil
 }
 
 func (c *ConfOpt[T]) Close() error {

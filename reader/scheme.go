@@ -14,31 +14,41 @@ type Scheme string
 var schemeReaderMap sync.Map
 
 // RegisterReader registers a reader for given scheme
-func RegisterReader(scheme Scheme, reader ConfReader) error {
+func RegisterReader(scheme Scheme, newReader func(uri string) (ConfReader, error)) error {
 	if scheme == "" {
 		return fmt.Errorf("empty scheme")
 	}
-	if reader == nil {
+	if newReader == nil {
 		return fmt.Errorf("nil reader")
 	}
 
-	schemeReaderMap.Store(scheme, reader)
+	schemeReaderMap.Store(scheme, newReader)
 	return nil
 }
 
-// GetReader returns reader for given scheme
-func GetReader(scheme Scheme) (ConfReader, bool) {
+// GetReader creates and returns reader for given scheme and URI
+func GetReader(scheme Scheme, uri string) (ConfReader, error) {
 	value, exists := schemeReaderMap.Load(scheme)
 	if !exists {
-		return nil, false
+		return nil, fmt.Errorf("unsupported scheme: %s", scheme)
 	}
 
-	reader, ok := value.(ConfReader)
+	newReaderFunc, ok := value.(func(uri string) (ConfReader, error))
 	if !ok {
-		return nil, false
+		return nil, fmt.Errorf("invalid reader constructor for scheme: %s", scheme)
 	}
 
-	return reader, true
+	return newReaderFunc(uri)
+}
+
+// NewReader creates reader from URI by detecting scheme automatically
+func NewReader(uri string) (ConfReader, error) {
+	u, err := ParseURI(uri)
+	if err != nil {
+		return nil, err
+	}
+
+	return GetReader(Scheme(u.Scheme), uri)
 }
 
 // ParseURI parses URI and validates configuration information
