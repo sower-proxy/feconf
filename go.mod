@@ -1,8 +1,6 @@
 module github.com/sower-proxy/conf
 
-go 1.21.0
-
-toolchain go1.24.5
+go 1.21
 
 require (
 	github.com/go-viper/mapstructure/v2 v2.4.0

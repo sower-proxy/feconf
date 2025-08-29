@@ -1,140 +1,195 @@
-package config
+package conf
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
-	"os"
+	"net/url"
 	"path/filepath"
-	"reflect"
-	"regexp"
-	"strings"
 
 	"github.com/go-viper/mapstructure/v2"
-	"github.com/pelletier/go-toml/v2"
-	"github.com/sower-proxy/deferlog/v2"
-	"gopkg.in/yaml.v3"
+	"github.com/sower-proxy/conf/decoder"
+	"github.com/sower-proxy/conf/reader"
 )
 
-var Version, Date string
+type ConfOpt[T any] struct {
+	uri        string
+	ParserConf mapstructure.DecoderConfig
+	parsedURL  *url.URL
+	reader     reader.ConfReader
+	decoder    decoder.ConfDecoder
+	rawData    []byte
+	parsedData map[string]any
+}
 
-func ReadConfig[T interface{ Validate() error }](file string, conf *T) (err error) {
-	defer func() { deferlog.DebugError(err, "ReadConfig", "file", file) }()
+func New[T any](uri string) *ConfOpt[T] {
+	return &ConfOpt[T]{
+		uri:        uri,
+		ParserConf: DefaultParserConfig,
+	}
+}
 
-	f, err := os.Open(file)
+func (c *ConfOpt[T]) parseUri() (err error) {
+	c.parsedURL, err = reader.ParseURI(c.uri)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to parse URI: %w", err)
 	}
-	defer f.Close()
 
-	decodeM := map[string]any{}
-	switch filepath.Ext(file) {
-	case ".json":
-		err = json.NewDecoder(f).Decode(&decodeM)
-	case ".toml":
-		err = toml.NewDecoder(f).Decode(&decodeM)
-	case ".yaml", ".yml":
-		err = yaml.NewDecoder(f).Decode(&decodeM)
+	var exists bool
+	c.reader, exists = reader.GetReader(reader.Scheme(c.parsedURL.Scheme))
+	if !exists {
+		return fmt.Errorf("no reader registered for scheme: %s", c.parsedURL.Scheme)
 	}
+
+	format, err := c.getFormat()
 	if err != nil {
-		return fmt.Errorf("decode config(%s): %w", filepath.Base(file), err)
+		return fmt.Errorf("failed to determine format: %w", err)
 	}
 
-	decoder, _ := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-		DecodeHook: mapstructure.ComposeDecodeHookFunc(
-			renderEnvHook(),
-			renderBoolHook(),
-			mapstructure.StringToTimeDurationHookFunc(),
-			mapstructure.StringToSliceHookFunc(","),
-		),
-		TagName: "json",
-		Result:  conf,
-		MatchName: func(mapKey, fieldName string) bool {
-			return strings.EqualFold(strings.ReplaceAll(mapKey, "_", ""), fieldName)
-		},
-	})
-	if err := decoder.Decode(decodeM); err != nil {
-		return fmt.Errorf("mapstructure config: %w", err)
+	c.decoder, err = decoder.GetDecoder(format)
+	if err != nil {
+		return fmt.Errorf("failed to get decoder for format %s: %w", format, err)
 	}
 
-	return (*conf).Validate()
+	return nil
 }
-func renderBoolHook() mapstructure.DecodeHookFuncType {
-	return func(f reflect.Type, t reflect.Type, data any) (any, error) {
-		if f.Kind() != reflect.String || t.Kind() != reflect.Bool {
-			return data, nil
-		}
-
-		switch strings.ToLower(strings.TrimSpace(data.(string))) {
-		case "true", "yes", "1", "on", "enable", "enabled":
-			return true, nil
-		case "false", "no", "0", "off", "disable", "disabled":
-			return false, nil
-		default:
-			return false, fmt.Errorf("cannot parse '%s' as boolean", data)
-		}
+func (c *ConfOpt[T]) getFormat() (decoder.Format, error) {
+	if c.parsedURL == nil {
+		return "", fmt.Errorf("URI not parsed")
 	}
+
+	ext := filepath.Ext(c.parsedURL.Path)
+	if ext != "" {
+		return decoder.FormatFromExtension(ext)
+	}
+
+	contentType := c.parsedURL.Query().Get("content-type")
+	if contentType != "" {
+		return decoder.FormatFromMIME(contentType)
+	}
+
+	return "", fmt.Errorf("cannot determine format from URI: %s", c.uri)
 }
 
-func renderEnvHook() mapstructure.DecodeHookFuncType {
-	return func(f reflect.Type, t reflect.Type, data any) (any, error) {
-		if f.Kind() != reflect.String {
-			return data, nil
-		}
-
-		return renderEnv(data.(string)), nil
+func (c *ConfOpt[T]) readData(ctx context.Context) error {
+	if c.reader == nil {
+		return fmt.Errorf("reader not initialized")
 	}
+
+	event, err := c.reader.Read(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to read configuration: %w", err)
+	}
+
+	if !event.IsValid() {
+		if event.Error != nil {
+			return fmt.Errorf("configuration read error: %w", event.Error)
+		}
+		return fmt.Errorf("invalid configuration data")
+	}
+
+	c.rawData = event.Data
+	return nil
 }
 
-var envRe = regexp.MustCompile(`\$\{([a-zA-Z0-9_]+)(?::-([^}]*))?\}`)
-
-func renderEnv(value string) string {
-	matches := envRe.FindAllStringSubmatch(value, -1)
-	idxPairs := envRe.FindAllStringIndex(value, -1)
-	if len(matches) == 0 {
-		return value
+func (c *ConfOpt[T]) decode() error {
+	if len(c.rawData) == 0 {
+		return fmt.Errorf("no data to decode")
 	}
 
-	result := ""
-	lastEnd := 0
-
-	for i, match := range matches {
-		idxPair := idxPairs[i]
-		start := idxPair[0]
-		end := idxPair[1]
-
-		// 检查是否被转义（前面有$符号）
-		if prevByte(value, start) == '$' {
-			// 保持转义的内容，但去掉一个$符号
-			result += value[lastEnd:start-1] + value[start:end]
-			lastEnd = end
-			continue
-		}
-
-		// 添加变量前的内容
-		result += value[lastEnd:start]
-
-		// 处理环境变量
-		envName := match[1]
-		defaultValue := match[2] // 可能为空字符串
-		envValue := os.Getenv(envName)
-
-		// 如果环境变量不存在且有默认值，使用默认值
-		if envValue == "" && defaultValue != "" {
-			envValue = defaultValue
-		}
-
-		result += envValue
-		lastEnd = end
+	if c.decoder == nil {
+		return fmt.Errorf("decoder not initialized")
 	}
 
-	// 添加最后剩余的内容
-	result += value[lastEnd:]
-	return result
+	var parsedData map[string]any
+	if err := c.decoder.Decode(c.rawData, &parsedData); err != nil {
+		return fmt.Errorf("failed to decode configuration data: %w", err)
+	}
+
+	c.parsedData = parsedData
+	return nil
 }
 
-func prevByte(value string, idx int) byte {
-	if idx == 0 {
-		return 0
+func (c *ConfOpt[T]) Load(ctx context.Context) (*T, error) {
+	if err := c.parseUri(); err != nil {
+		return nil, fmt.Errorf("failed to parse URI: %w", err)
 	}
-	return value[idx-1]
+
+	if err := c.readData(ctx); err != nil {
+		return nil, fmt.Errorf("failed to read data: %w", err)
+	}
+
+	if err := c.decode(); err != nil {
+		return nil, fmt.Errorf("failed to decode data: %w", err)
+	}
+
+	var result T
+	c.ParserConf.Result = &result
+	mapDecoder, err := mapstructure.NewDecoder(&c.ParserConf)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create mapstructure decoder: %w", err)
+	}
+
+	if err := mapDecoder.Decode(c.parsedData); err != nil {
+		return nil, fmt.Errorf("failed to decode to struct: %w", err)
+	}
+
+	return &result, nil
+}
+
+func (c *ConfOpt[T]) Subscribe(ctx context.Context) (<-chan *T, error) {
+	if err := c.parseUri(); err != nil {
+		return nil, fmt.Errorf("failed to parse URI: %w", err)
+	}
+
+	eventChan, err := c.reader.Subscribe(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to subscribe to configuration changes: %w", err)
+	}
+
+	configChan := make(chan *T, 1)
+
+	go func() {
+		defer close(configChan)
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case event, ok := <-eventChan:
+				if !ok {
+					return
+				}
+				if !event.IsValid() {
+					continue
+				}
+
+				c.rawData = event.Data
+				if err := c.decode(); err != nil {
+					continue
+				}
+
+				var result T
+				c.ParserConf.Result = &result
+				mapDecoder, err := mapstructure.NewDecoder(&c.ParserConf)
+				if err != nil {
+					continue
+				}
+
+				if err := mapDecoder.Decode(c.parsedData); err != nil {
+					continue
+				}
+
+				configChan <- &result
+			}
+		}
+	}()
+
+	return configChan, nil
+}
+
+func (c *ConfOpt[T]) Close() error {
+	if c.reader != nil {
+		return c.reader.Close()
+	}
+	return nil
 }
