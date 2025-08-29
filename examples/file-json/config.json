@@ -1,0 +1,11 @@
+{
+    "server": {
+        "host": "${HOST:-localhost}",
+        "port": "${PORT:-8080}",
+        "debug": "${DEBUG:-false}"
+    },
+    "database": {
+        "url": "${DB_URL:-sqlite:///app.db}",
+        "max_connections": 10
+    }
+}

@@ -1,10 +1,10 @@
 module github.com/sower-proxy/conf
 
-go 1.21
+go 1.21.0
 
 require (
+	github.com/fsnotify/fsnotify v1.9.0
 	github.com/go-viper/mapstructure/v2 v2.4.0
-	github.com/pelletier/go-toml/v2 v2.2.4
-	github.com/sower-proxy/deferlog/v2 v2.0.2
-	gopkg.in/yaml.v3 v3.0.1
 )
+
+require golang.org/x/sys v0.13.0 // indirect
