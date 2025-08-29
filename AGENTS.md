@@ -11,21 +11,22 @@
 ## 目录结构
 ├── reader # 封装 interface、常量定义、uri 解析器等
 ├──── file # 封装文件读取器，支持订阅等实时更新的能力
-├──── http # 封装 HTTP 读取器，支持检测 SSE 订阅等实时更新的能力
+├──── http # 封装 HTTP 读取器，支持基础认证、自定义头部、TLS配置、SSE 订阅等实时更新的能力
 ├──── ws # 封装 WebSocket 读取器，支持实时更新的能力
 ├──── redis # 封装 Redis 读取器，支持订阅等实时更新的能力
 ├── decoder # 封装 interface、文件格式常量定义等
-├──── json
-├──── yaml
+├──── json # JSON 格式解码器，支持标准 JSON 解析
+├──── yaml # YAML 格式解码器，支持 YAML v3 标准，包括锚点、别名、多行字符串等
 ├──── toml
 ├──── xml
 ├──── ini
 ├──── env
 ├──── hcl
 ├── examples # 给定一些使用示例，包括几种 reader 的使用方法，包括示例的配置文件
+├──── file-json # 文件 + JSON 配置示例
+├──── http-yaml # HTTP + YAML 配置示例，包括基础认证和 SSE 实时更新
 ├── parser.go # mapstructure 相关的映射器的实现
 └── conf.go etc # 封装好一个 Conf 实例，提供统一、简洁的配置和使用方法定义
-
 
 ## 要求
 1. 遵循 Go 官方代码风格 (gofmt + goimports)
