@@ -22,8 +22,18 @@ func TestNewRedisReader(t *testing.T) {
 			wantError: false,
 		},
 		{
+			name:      "valid redis URI with hash field",
+			uri:       "redis://localhost:6379/config:app#field1",
+			wantError: false,
+		},
+		{
 			name:      "valid rediss URI with key",
 			uri:       "rediss://localhost:6379/config:app",
+			wantError: false,
+		},
+		{
+			name:      "valid rediss URI with hash field",
+			uri:       "rediss://localhost:6379/config:app#field1",
 			wantError: false,
 		},
 		{
@@ -32,8 +42,18 @@ func TestNewRedisReader(t *testing.T) {
 			wantError: false,
 		},
 		{
+			name:      "URI with password and hash field",
+			uri:       "redis://:password@localhost:6379/config:app#field1",
+			wantError: false,
+		},
+		{
 			name:      "URI with database",
 			uri:       "redis://localhost:6379/config:app?db=1",
+			wantError: false,
+		},
+		{
+			name:      "URI with database and hash field",
+			uri:       "redis://localhost:6379/config:app?db=1#field1",
 			wantError: false,
 		},
 		{
@@ -100,6 +120,84 @@ func TestRedisReader_ReadNonExistentKey(t *testing.T) {
 
 	// Create reader with non-existent key
 	uri := fmt.Sprintf("redis://%s/non_existent_key", s.Addr())
+	rr, err := NewRedisReader(uri)
+	if err != nil {
+		t.Fatalf("NewRedisReader() error = %v", err)
+	}
+	defer rr.Close()
+
+	// Test read
+	ctx := context.Background()
+	_, err = rr.Read(ctx)
+	if err == nil {
+		t.Error("Read() expected error for non-existent key")
+	}
+}
+
+func TestRedisReader_ReadHashField(t *testing.T) {
+	// Setup miniredis
+	s := miniredis.RunT(t)
+	defer s.Close()
+
+	// Setup test data - create a hash with multiple fields
+	testKey := "config:app"
+	testField := "database"
+	testValue := `{"host": "localhost", "port": 5432}`
+	s.HSet(testKey, testField, testValue)
+	s.HSet(testKey, "cache", `{"redis": true}`)
+
+	// Create reader with hash field
+	uri := fmt.Sprintf("redis://%s/%s#%s", s.Addr(), testKey, testField)
+	rr, err := NewRedisReader(uri)
+	if err != nil {
+		t.Fatalf("NewRedisReader() error = %v", err)
+	}
+	defer rr.Close()
+
+	// Test read
+	ctx := context.Background()
+	data, err := rr.Read(ctx)
+	if err != nil {
+		t.Fatalf("Read() error = %v", err)
+	}
+
+	if string(data) != testValue {
+		t.Errorf("Read() got = %s, want = %s", string(data), testValue)
+	}
+}
+
+func TestRedisReader_ReadNonExistentHashField(t *testing.T) {
+	// Setup miniredis
+	s := miniredis.RunT(t)
+	defer s.Close()
+
+	// Setup test data - create a hash but without the field we're looking for
+	testKey := "config:app"
+	s.HSet(testKey, "existing_field", "value")
+
+	// Create reader with non-existent hash field
+	uri := fmt.Sprintf("redis://%s/%s#%s", s.Addr(), testKey, "non_existent_field")
+	rr, err := NewRedisReader(uri)
+	if err != nil {
+		t.Fatalf("NewRedisReader() error = %v", err)
+	}
+	defer rr.Close()
+
+	// Test read
+	ctx := context.Background()
+	_, err = rr.Read(ctx)
+	if err == nil {
+		t.Error("Read() expected error for non-existent hash field")
+	}
+}
+
+func TestRedisReader_ReadNonExistentHashKey(t *testing.T) {
+	// Setup miniredis
+	s := miniredis.RunT(t)
+	defer s.Close()
+
+	// Create reader with non-existent key
+	uri := fmt.Sprintf("redis://%s/%s#%s", s.Addr(), "non_existent_key", "field")
 	rr, err := NewRedisReader(uri)
 	if err != nil {
 		t.Fatalf("NewRedisReader() error = %v", err)
@@ -258,6 +356,28 @@ func TestParseRedisURI(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "URI with hash field",
+			uri:  "redis://localhost:6379/config:app#field1",
+			expected: &RedisConfig{
+				Addr:      "localhost:6379",
+				Key:       "config:app",
+				HashField: "field1",
+				DB:        0,
+			},
+			wantErr: false,
+		},
+		{
+			name: "URI with database and hash field",
+			uri:  "redis://localhost:6379/config:app?db=2#field2",
+			expected: &RedisConfig{
+				Addr:      "localhost:6379",
+				Key:       "config:app",
+				HashField: "field2",
+				DB:        2,
+			},
+			wantErr: false,
+		},
+		{
 			name:    "invalid database",
 			uri:     "redis://localhost:6379/config:app?db=invalid",
 			wantErr: true,
@@ -299,6 +419,9 @@ func TestParseRedisURI(t *testing.T) {
 				}
 				if config.Key != tt.expected.Key {
 					t.Errorf("Key = %v, want %v", config.Key, tt.expected.Key)
+				}
+				if config.HashField != tt.expected.HashField {
+					t.Errorf("HashField = %v, want %v", config.HashField, tt.expected.HashField)
 				}
 				if config.DB != tt.expected.DB {
 					t.Errorf("DB = %v, want %v", config.DB, tt.expected.DB)

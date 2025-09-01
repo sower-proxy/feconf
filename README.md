@@ -82,6 +82,9 @@ loader := conf.New[Config]("wss://realtime.example.com/config?ping_interval=30s"
 ### Redis
 ```go
 loader := conf.New[Config]("redis://localhost:6379/config-key?db=1&pool_size=10")
+
+// For Redis hash fields
+loader := conf.New[Config]("redis://localhost:6379/config-hash#field-name")
 ```
 
 ## Supported Formats
@@ -239,6 +242,13 @@ The configuration library supports various special query parameters during URI p
 | `min_idle_conns` | integer | `1` | ≥ 0 | Minimum idle connections in pool | `?min_idle_conns=5` |
 | `tls_insecure` | boolean | `false` | - | Skip TLS certificate verification for REDISS | `?tls_insecure=true` |
 
+**Hash Field Support**: Use URI fragment (`#field-name`) to read from specific hash fields:
+```
+redis://localhost:6379/user:123?content-type=application/json#profile
+redis://localhost:6379/settings?content-type=application/json#database
+```
+Note: When using hash fields, you must specify `content-type` parameter for format detection.
+
 ## URI Examples
 
 ### HTTP with Custom Parameters
@@ -254,6 +264,11 @@ wss://realtime-config.example.com/config?ping_interval=30s&pong_wait=90s&tls_ins
 ### Redis with Database and Pool Settings
 ```
 redis://localhost:6379/my-config-key?db=2&pool_size=15&max_retries=3&timeout=10s
+```
+
+### Redis with Hash Field
+```
+redis://localhost:6379/app-settings?db=1&timeout=5s&content-type=application/json#database
 ```
 
 ### File with Content Type Override
