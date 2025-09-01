@@ -48,6 +48,7 @@ type RedisConfig struct {
 	Password     string
 	DB           int
 	Key          string
+	HashField    string // Optional hash field name for hash operations
 	Timeout      time.Duration
 	TLSConfig    *tls.Config
 	RetryDelay   time.Duration
@@ -205,14 +206,28 @@ func (r *RedisReader) fetchWithRetry(ctx context.Context) ([]byte, error) {
 	return nil, fmt.Errorf("failed after %d attempts: %w", r.config.MaxRetries, lastErr)
 }
 
-// fetch performs single Redis GET operation
+// fetch performs single Redis GET or HGET operation
 func (r *RedisReader) fetch(ctx context.Context) ([]byte, error) {
-	result := r.client.Get(ctx, r.config.Key)
+	var result *redis.StringCmd
+	var operationType string
+
+	// Use HGET for hash field operations, GET for regular key operations
+	if r.config.HashField != "" {
+		result = r.client.HGet(ctx, r.config.Key, r.config.HashField)
+		operationType = "HGET"
+	} else {
+		result = r.client.Get(ctx, r.config.Key)
+		operationType = "GET"
+	}
+
 	if result.Err() != nil {
 		if result.Err() == redis.Nil {
+			if r.config.HashField != "" {
+				return nil, fmt.Errorf("hash field '%s' not found in key '%s'", r.config.HashField, r.config.Key)
+			}
 			return nil, fmt.Errorf("key '%s' not found", r.config.Key)
 		}
-		return nil, fmt.Errorf("failed to get key '%s': %w", r.config.Key, result.Err())
+		return nil, fmt.Errorf("failed to %s key '%s': %w", operationType, r.config.Key, result.Err())
 	}
 
 	data, err := result.Bytes()
@@ -237,9 +252,16 @@ func (r *RedisReader) ensureKeyspaceNotifications(ctx context.Context) error {
 	}
 
 	// Enable keyspace notifications if not already enabled
-	// We need 'K' (keyspace events) and either 's' (string commands) or '$' (generic commands)
+	// For hash fields, we need 'K' (keyspace events) and 'h' (hash commands) or '$' (generic commands)
 	needsKeyspace := !strings.Contains(currentConfig, "K")
-	needsCommands := !strings.Contains(currentConfig, "s") && !strings.Contains(currentConfig, "$")
+	var needsCommands bool
+	if r.config.HashField != "" {
+		// For hash operations, prefer 'h' (hash commands) but fall back to '$' (generic commands)
+		needsCommands = !strings.Contains(currentConfig, "h") && !strings.Contains(currentConfig, "$")
+	} else {
+		// For string operations, prefer 's' (string commands) but fall back to '$' (generic commands) 
+		needsCommands = !strings.Contains(currentConfig, "s") && !strings.Contains(currentConfig, "$")
+	}
 	
 	if needsKeyspace || needsCommands {
 		newConfig := currentConfig
@@ -247,7 +269,13 @@ func (r *RedisReader) ensureKeyspaceNotifications(ctx context.Context) error {
 			newConfig += "K"
 		}
 		if needsCommands {
-			newConfig += "$" // Use generic commands instead of string commands
+			if r.config.HashField != "" {
+				// Prefer hash-specific commands for hash operations
+				newConfig += "h"
+			} else {
+				// Use generic commands for string operations
+				newConfig += "$"
+			}
 		}
 		result := r.client.ConfigSet(ctx, "notify-keyspace-events", newConfig)
 		if result.Err() != nil {
@@ -339,6 +367,11 @@ func parseRedisURI(u *url.URL, config *RedisConfig) error {
 	// Extract key from path
 	if u.Path != "" {
 		config.Key = strings.TrimPrefix(u.Path, "/")
+	}
+
+	// Extract hash field from fragment
+	if u.Fragment != "" {
+		config.HashField = u.Fragment
 	}
 
 	// Parse query parameters
