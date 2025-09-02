@@ -8,49 +8,65 @@ import (
 
 	"github.com/sower-proxy/conf"
 	_ "github.com/sower-proxy/conf/decoder/yaml"
-	_ "github.com/sower-proxy/conf/reader/file"
+	_ "github.com/sower-proxy/conf/reader/k8s"
 )
 
 type Config struct {
-	Server   ServerConfig   `yaml:"server"`
+	App     AppConfig     `yaml:"app"`
 	Database DatabaseConfig `yaml:"database"`
-	Redis    RedisConfig    `yaml:"redis"`
+	Features FeaturesConfig `yaml:"features"`
 }
 
-type ServerConfig struct {
-	Host  string `yaml:"host"`
-	Port  int    `yaml:"port"`
-	Debug bool   `yaml:"debug"`
+type AppConfig struct {
+	Name        string `yaml:"name"`
+	Version     string `yaml:"version"`
+	Environment string `yaml:"environment"`
+	Debug       bool   `yaml:"debug"`
 }
 
 type DatabaseConfig struct {
-	URL            string `yaml:"url"`
-	MaxConnections int    `yaml:"max_connections"`
+	Host            string `yaml:"host"`
+	Port            int    `yaml:"port"`
+	Name            string `yaml:"name"`
+	MaxConnections  int    `yaml:"max_connections"`
+	ConnectionTimeout int `yaml:"connection_timeout"`
 }
 
-type RedisConfig struct {
-	Address  string `yaml:"address"`
-	Password string `yaml:"password"`
-	DB       int    `yaml:"db"`
+type FeaturesConfig struct {
+	EnableCache    bool     `yaml:"enable_cache"`
+	EnableMetrics  bool     `yaml:"enable_metrics"`
+	AllowedOrigins []string `yaml:"allowed_origins"`
 }
 
 func main() {
-	// Load configuration from file (use absolute path with extension)
-	loader := conf.New[Config]("file://./config.yaml")
+	// Load configuration from Kubernetes ConfigMap using ~/.kube/config
+	// Format: k8s://[resource-type]/[namespace]/[name]/[key]
+	// Example: k8s://configmap/default/my-app-config/config.yaml
+	loader := conf.New[Config]("k8s://configmap/default/my-app-config/config.yaml")
 	config, err := loader.Load()
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	fmt.Printf("Server: %s:%d (debug: %t)\n",
-		config.Server.Host, config.Server.Port, config.Server.Debug)
-	fmt.Printf("Database: %s (max_conn: %d)\n",
-		config.Database.URL, config.Database.MaxConnections)
-	fmt.Printf("Redis: %s (db: %d)\n",
-		config.Redis.Address, config.Redis.DB)
+	fmt.Printf("=== Application Configuration ===\n")
+	fmt.Printf("Name: %s\n", config.App.Name)
+	fmt.Printf("Version: %s\n", config.App.Version)
+	fmt.Printf("Environment: %s\n", config.App.Environment)
+	fmt.Printf("Debug: %t\n", config.App.Debug)
 
-	fmt.Println()
-	fmt.Println("=== Starting subscription to watch for config changes ===")
+	fmt.Printf("\n=== Database Configuration ===\n")
+	fmt.Printf("Host: %s\n", config.Database.Host)
+	fmt.Printf("Port: %d\n", config.Database.Port)
+	fmt.Printf("Name: %s\n", config.Database.Name)
+	fmt.Printf("Max Connections: %d\n", config.Database.MaxConnections)
+	fmt.Printf("Connection Timeout: %ds\n", config.Database.ConnectionTimeout)
+
+	fmt.Printf("\n=== Features Configuration ===\n")
+	fmt.Printf("Enable Cache: %t\n", config.Features.EnableCache)
+	fmt.Printf("Enable Metrics: %t\n", config.Features.EnableMetrics)
+	fmt.Printf("Allowed Origins: %v\n", config.Features.AllowedOrigins)
+
+	fmt.Println("\n=== Starting subscription to watch for config changes ===")
 
 	// Subscribe to configuration changes
 	eventChan, err := loader.Subscribe()
@@ -60,42 +76,40 @@ func main() {
 	defer loader.Close()
 
 	// Create a context with timeout for demonstration
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
 	go func() {
 		for {
 			select {
 			case <-ctx.Done():
-				fmt.Println("Subscription timeout, exiting...")
+				fmt.Println("\nSubscription timeout, exiting...")
 				return
 			case event, ok := <-eventChan:
 				if !ok {
-					fmt.Println("Event channel closed")
+					fmt.Println("\nEvent channel closed")
 					return
 				}
 
 				if event.IsValid() {
-					fmt.Printf("[%s] Config updated from: %s\n",
+					fmt.Printf("\n[%s] Config updated from: %s\n",
 						event.Timestamp.Format("2006-01-02 15:04:05"), event.SourceURI)
-					fmt.Printf("  Server: %s:%d (debug: %t)\n",
-						event.Config.Server.Host, event.Config.Server.Port, event.Config.Server.Debug)
-					fmt.Printf("  Database: %s (max_conn: %d)\n",
-						event.Config.Database.URL, event.Config.Database.MaxConnections)
-					fmt.Printf("  Redis: %s (db: %d)\n",
-						event.Config.Redis.Address, event.Config.Redis.DB)
+					fmt.Printf("App Version: %s (Debug: %t)\n",
+						event.Config.App.Version, event.Config.App.Debug)
+					fmt.Printf("Database: %s:%d\n",
+						event.Config.Database.Host, event.Config.Database.Port)
 				} else {
-					fmt.Printf("[%s] Error: %v\n",
+					fmt.Printf("\n[%s] Error: %v\n",
 						event.Timestamp.Format("2006-01-02 15:04:05"), event.Error)
 				}
 			}
 		}
 	}()
 
-	fmt.Println("Watching for configuration changes... (modify config.yaml to see updates)")
+	fmt.Println("Watching for configuration changes...")
+	fmt.Println("(Update the ConfigMap in Kubernetes to see real-time updates)")
 	fmt.Println("Press Ctrl+C to exit or wait for timeout")
 
 	// Wait for context timeout or interruption
 	<-ctx.Done()
-
 }
