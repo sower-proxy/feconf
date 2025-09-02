@@ -1,11 +1,21 @@
-server:
-  host: "${HOST:-0.0.0.0}"
-  port: "${PORT:-8080}"
-  debug: "${DEBUG:-false}"
+app:
+  name: "my-awesome-app"
+  version: "1.11.0"
+  environment: "development"
+  debug: false
+
 database:
-  url: "${DB_URL:-sqlite:///app.db}"
-  max_connections: 20
-redis:
-  address: "${REDIS_ADDR:-localhost:6379}"
-  password: "${REDIS_PASSWORD:-}"
-  db: "${REDIS_DB:-0}"
+  host: "postgres-service"
+  port: 5432
+  name: "myapp_db"
+  max_connections: 30
+  connection_timeout: 30
+
+features:
+  enable_cache: false
+  enable_metrics: true
+  allowed_origins:
+    - "https://example.com"
+    - "https://api.example.com"
+    - "http://localhost:3000"
+    - "https://staging.example.com"  # Added at 20250902_144157
