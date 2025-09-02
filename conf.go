@@ -2,6 +2,7 @@ package conf
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"net/url"
 	"path/filepath"
@@ -11,6 +12,9 @@ import (
 	"github.com/sower-proxy/conf/decoder"
 	"github.com/sower-proxy/conf/reader"
 )
+
+// DefaultConfigFlag is the default flag name for configuration URI
+const DefaultConfigFlag = "config"
 
 type ConfOpt[T any] struct {
 	uri        string
@@ -27,6 +31,60 @@ func New[T any](uri string) *ConfOpt[T] {
 		uri:        uri,
 		ParserConf: DefaultParserConfig,
 	}
+}
+
+// NewWithFlags creates a configuration loader that reads URI from command-line flags
+// If no flag is provided or the flag value is empty, defaultURI is used
+func NewWithFlags[T any](defaultURI string) *ConfOpt[T] {
+	return NewWithFlagsNamed[T](DefaultConfigFlag, defaultURI)
+}
+
+// NewWithFlagsNamed creates a configuration loader that reads URI from a named command-line flag
+// If no flag is provided or the flag value is empty, defaultURI is used
+func NewWithFlagsNamed[T any](flagName, defaultURI string) *ConfOpt[T] {
+	uri := getFlagValue(flagName, defaultURI)
+	return &ConfOpt[T]{
+		uri:        uri,
+		ParserConf: DefaultParserConfig,
+	}
+}
+
+// getFlagValue retrieves the value of a flag, returning the default if the flag is not set or empty
+func getFlagValue(flagName, defaultValue string) string {
+	// Check if the flag has already been defined
+	var flagExists bool
+	flag.VisitAll(func(f *flag.Flag) {
+		if f.Name == flagName {
+			flagExists = true
+		}
+	})
+	
+	// If flag is not defined, define it
+	if !flagExists {
+		flag.String(flagName, defaultValue, "Configuration file URI")
+	}
+	
+	// Parse flags if not already parsed
+	if !flag.Parsed() {
+		flag.Parse()
+	}
+	
+	// Get the actual flag value from the command line
+	var actualValue string
+	var wasSet bool
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == flagName {
+			actualValue = f.Value.String()
+			wasSet = true
+		}
+	})
+	
+	// If flag was set and has a value, use it; otherwise use default
+	if wasSet && actualValue != "" {
+		return actualValue
+	}
+	
+	return defaultValue
 }
 
 func (c *ConfOpt[T]) parseUri() (err error) {

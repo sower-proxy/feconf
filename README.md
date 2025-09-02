@@ -9,6 +9,7 @@ A flexible, URI-based configuration management library for Go that supports mult
 - 🌐 **Multiple Protocols**: Support for HTTP/HTTPS, WebSocket, Redis, and local files
 - 📄 **Multiple Formats**: JSON, YAML, INI, TOML, and XML configuration formats
 - 🔄 **Real-time Updates**: Subscribe to configuration changes with automatic reloading
+- 🚩 **Command-line Flags**: Built-in support for reading configuration URI from flags
 - 🔌 **Extensible**: Plugin-based architecture for custom readers and decoders
 - ⚡ **Performance**: Efficient parsing with connection pooling and retry mechanisms
 - 🔒 **Security**: TLS support with custom certificates and authentication
@@ -50,6 +51,15 @@ func main() {
 
     fmt.Printf("Server: %s:%d\n", config.Host, config.Port)
 }
+```
+
+For command-line flag support:
+```go
+// Read config URI from -config flag, fallback to default if not provided
+loader := conf.NewWithFlags[Config]("file://./default-config.json")
+
+// Or use custom flag name
+loader := conf.NewWithFlagsNamed[Config]("app-config", "file://./default-config.json")
 ```
 
 For real-time updates:
@@ -122,7 +132,13 @@ The `examples/` directory contains complete working examples:
 - **File + JSON**: Basic file-based configuration with JSON format
 - **HTTP + YAML**: HTTP-based configuration with YAML format and authentication
 - **Redis + INI**: Redis-based configuration with INI format
+- **Redis + Hash**: Redis hash field configuration with JSON format
 - **WebSocket + XML**: Real-time configuration updates via WebSocket with XML format
+<<<<<<< Updated upstream
+=======
+- **Flags**: Command-line flag support for configuration URI specification
+
+>>>>>>> Stashed changes
 ### Running Examples
 
 ```bash
@@ -134,6 +150,12 @@ cd examples/http-yaml && go run .
 
 # Redis example (requires Redis server)
 cd examples/redis-ini && ./setup.sh && go run .
+
+# Redis hash fields example (requires Redis server)
+cd examples/redis-hash && ./setup.sh && go run .
+
+# Command-line flags example
+cd examples/flags && go run . -config file://./prod-config.json
 
 # WebSocket example (starts a demo WebSocket server)
 cd examples/ws-xml && go run .

@@ -1,0 +1,11 @@
+{
+  "server": {
+    "host": "localhost",
+    "port": 8080,
+    "debug": true
+  },
+  "database": {
+    "url": "postgresql://localhost:5432/myapp",
+    "max_connections": 10
+  }
+}
