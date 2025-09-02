@@ -259,10 +259,10 @@ func (r *RedisReader) ensureKeyspaceNotifications(ctx context.Context) error {
 		// For hash operations, prefer 'h' (hash commands) but fall back to '$' (generic commands)
 		needsCommands = !strings.Contains(currentConfig, "h") && !strings.Contains(currentConfig, "$")
 	} else {
-		// For string operations, prefer 's' (string commands) but fall back to '$' (generic commands) 
+		// For string operations, prefer 's' (string commands) but fall back to '$' (generic commands)
 		needsCommands = !strings.Contains(currentConfig, "s") && !strings.Contains(currentConfig, "$")
 	}
-	
+
 	if needsKeyspace || needsCommands {
 		newConfig := currentConfig
 		if needsKeyspace {
@@ -292,7 +292,7 @@ func (r *RedisReader) subscribeKeyspace(ctx context.Context, eventChan chan<- *r
 
 	// Create keyspace pattern for the specific key
 	keyspacePattern := fmt.Sprintf("__keyspace@%d__:%s", r.config.DB, r.config.Key)
-	
+
 	// Debug: Log subscription details
 	fmt.Printf("Redis: Subscribing to pattern: %s\n", keyspacePattern)
 

@@ -18,6 +18,7 @@
 ├──── http # 封装 HTTP 读取器，支持基础认证、自定义头部、TLS配置、SSE 订阅等实时更新的能力
 ├──── ws # 封装 WebSocket 读取器，支持实时更新的能力
 ├──── redis # 封装 Redis 读取器，支持订阅等实时更新的能力
+├──── k8s # 封装 k8s cm/secrets 读取器，支持订阅等实时更新的能力
 ├── decoder # 封装 interface、文件格式常量定义等
 ├──── json # JSON 格式解码器，支持标准 JSON 解析
 ├──── yaml # YAML 格式解码器，支持 YAML v3 标准，包括锚点、别名、多行字符串等
