@@ -87,6 +87,21 @@ loader := conf.New[Config]("redis://localhost:6379/config-key?db=1&pool_size=10"
 loader := conf.New[Config]("redis://localhost:6379/config-hash#field-name")
 ```
 
+### Kubernetes ConfigMap/Secret
+```go
+// Read from a ConfigMap
+loader := conf.New[Config]("k8s://configmap/default/app-config")
+
+// Read a specific key from a ConfigMap
+loader := conf.New[Config]("k8s://configmap/default/app-config/config.yaml")
+
+// Read from a Secret
+loader := conf.New[Config]("k8s://secret/default/db-secret")
+
+// Read a specific key from a Secret
+loader := conf.New[Config]("k8s://secret/default/db-secret/password")
+```
+
 ## Supported Formats
 
 The library automatically detects format from file extensions or can be specified via `content-type` parameter:

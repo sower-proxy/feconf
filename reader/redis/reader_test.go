@@ -214,7 +214,7 @@ func TestRedisReader_ReadNonExistentHashKey(t *testing.T) {
 
 func TestRedisReader_Subscribe(t *testing.T) {
 	t.Skip("Skipping subscribe test as miniredis doesn't support CONFIG command for keyspace notifications")
-	
+
 	// Setup miniredis
 	s := miniredis.RunT(t)
 	defer s.Close()
