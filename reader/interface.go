@@ -2,6 +2,7 @@ package reader
 
 import (
 	"context"
+	"fmt"
 	"time"
 )
 
@@ -27,14 +28,16 @@ type ReadEvent struct {
 
 // NewReadEvent creates a new configuration event with validation
 func NewReadEvent(sourceURI string, data []byte, err error) *ReadEvent {
-	event := &ReadEvent{
+	if err == nil && len(data) == 0 {
+		err = fmt.Errorf("empty configuration data")
+	}
+
+	return &ReadEvent{
 		SourceURI: sourceURI,
 		Timestamp: time.Now(),
 		Data:      data,
 		Error:     err,
 	}
-
-	return event
 }
 
 // IsValid checks if the configuration event is valid
