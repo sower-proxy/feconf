@@ -89,18 +89,20 @@ loader := conf.New[Config]("redis://localhost:6379/config-hash#field-name")
 
 ### Kubernetes ConfigMap/Secret
 ```go
-// Read from a ConfigMap
+// Read from a ConfigMap (returns first key's value)
 loader := conf.New[Config]("k8s://configmap/default/app-config")
 
-// Read a specific key from a ConfigMap
+// Read a specific key from a ConfigMap (e.g., a configuration file)
 loader := conf.New[Config]("k8s://configmap/default/app-config/config.yaml")
 
-// Read from a Secret
-loader := conf.New[Config]("k8s://secret/default/db-secret")
+// Read from a Secret (returns first key's value)
+loader := conf.New[string]("k8s://secret/default/db-secret")
 
-// Read a specific key from a Secret
-loader := conf.New[Config]("k8s://secret/default/db-secret/password")
+// Read a specific key from a Secret (e.g., a password)
+loader := conf.New[string]("k8s://secret/default/db-secret/password")
 ```
+
+The Kubernetes reader supports reading configuration data stored as keys in ConfigMaps or Secrets. When a specific key is provided in the URI, only that key's value is read. When no key is specified, the reader returns the first key's value if there's only one key, or returns an error if there are multiple keys.
 
 ## Supported Formats
 
