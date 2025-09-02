@@ -1,0 +1,11 @@
+server:
+  host: "${HOST:-0.0.0.0}"
+  port: "${PORT:-8080}"
+  debug: "${DEBUG:-false}"
+database:
+  url: "${DB_URL:-sqlite:///app.db}"
+  max_connections: 20
+redis:
+  address: "${REDIS_ADDR:-localhost:6379}"
+  password: "${REDIS_PASSWORD:-}"
+  db: "${REDIS_DB:-0}"

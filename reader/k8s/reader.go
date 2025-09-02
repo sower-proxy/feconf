@@ -1,9 +1,12 @@
+// Package k8s provides a configuration reader implementation for Kubernetes ConfigMaps and Secrets.
+// It supports reading configuration data from Kubernetes resources and subscribing to changes.
 package k8s
 
 import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -49,10 +52,12 @@ type K8SReader struct {
 }
 
 // NewK8SReader creates a new k8s reader
+// URI format: k8s://{resourceType}/{namespace}/{name}[/{key}]
+// Example: k8s://configmap/default/my-config/config.yaml
 func NewK8SReader(uri string) (*K8SReader, error) {
 	u, err := reader.ParseURI(uri)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse URI: %w", err)
 	}
 
 	if u.Scheme != string(SchemeK8S) {
@@ -64,35 +69,18 @@ func NewK8SReader(uri string) (*K8SReader, error) {
 	// In this case:
 	// - Host (u.Host) is the resourceType (configmap)
 	// - Path (u.Path) is /{namespace}/{name}[/{key}]
-	
+
 	resourceType := u.Host
-	
+
 	// Validate resource type
 	if resourceType != ResourceTypeConfigMap && resourceType != ResourceTypeSecret {
 		return nil, fmt.Errorf("unsupported resource type: %s, expected: %s or %s", resourceType, ResourceTypeConfigMap, ResourceTypeSecret)
 	}
 
 	// Parse path: /{namespace}/{name}[/{key}]
-	path := u.Path
-	// Remove leading slash if present
-	if len(path) > 0 && path[0] == '/' {
-		path = path[1:]
-	}
-	
-	// Split path properly
-	parts := []string{}
-	start := 0
-	for i, char := range path {
-		if char == '/' {
-			parts = append(parts, path[start:i])
-			start = i + 1
-		}
-	}
-	// Add the last part
-	if start < len(path) {
-		parts = append(parts, path[start:])
-	}
-
+	// Using strings.Split to properly handle path segments
+	path := strings.TrimPrefix(u.Path, "/")
+	parts := strings.Split(path, "/")
 	if len(parts) < 2 {
 		return nil, fmt.Errorf("invalid k8s URI path, expected format: k8s://{resourceType}/{namespace}/{name}[/{key}]")
 	}
@@ -169,15 +157,10 @@ func (k *K8SReader) Subscribe(ctx context.Context) (<-chan *reader.ReadEvent, er
 	}
 
 	// Create informer based on resource type
-	var informer cache.SharedIndexInformer
-	var factory informers.SharedInformerFactory
-	
-	factory = informers.NewSharedInformerFactoryWithOptions(
-		k.clientset,
-		time.Minute*10,
-		informers.WithNamespace(k.namespace),
-	)
+	factory := informers.NewSharedInformerFactoryWithOptions(
+		k.clientset, 0, informers.WithNamespace(k.namespace))
 
+	var informer cache.SharedIndexInformer
 	switch k.resourceType {
 	case ResourceTypeConfigMap:
 		informer = factory.Core().V1().ConfigMaps().Informer()
@@ -194,30 +177,29 @@ func (k *K8SReader) Subscribe(ctx context.Context) (<-chan *reader.ReadEvent, er
 
 	// Set up event handlers
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
+		AddFunc: func(obj any) {
 			k.handleResourceUpdate(ctx, eventChan)
 		},
-		UpdateFunc: func(oldObj, newObj interface{}) {
+		UpdateFunc: func(oldObj, newObj any) {
 			k.handleResourceUpdate(ctx, eventChan)
 		},
-		DeleteFunc: func(obj interface{}) {
+		DeleteFunc: func(obj any) {
 			// Send empty event when resource is deleted
-			confEvent := reader.NewReadEvent(k.uri, nil, nil)
+			confEvent := reader.NewReadEvent(k.uri, nil, fmt.Errorf("%s deleted", k.resourceType))
 			select {
 			case eventChan <- confEvent:
 			case <-ctx.Done():
+				// Context cancelled, ignore the event
 			}
 		},
 	})
 
 	// Start informer
 	go informer.Run(k.stopCh)
-	
-	// Start the factory
-	go factory.Start(k.stopCh)
 
 	// Wait for cache sync
 	if !cache.WaitForCacheSync(ctx.Done(), informer.HasSynced) {
+		// Clean up resources on failure
 		close(k.stopCh)
 		k.informer = nil
 		k.stopCh = nil
@@ -254,7 +236,7 @@ func (k *K8SReader) readConfigMap(ctx context.Context) ([]byte, error) {
 	if k.clientset == nil {
 		return nil, fmt.Errorf("k8s client not initialized")
 	}
-	
+
 	cm, err := k.clientset.CoreV1().ConfigMaps(k.namespace).Get(ctx, k.name, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get configmap %s/%s: %w", k.namespace, k.name, err)
@@ -268,14 +250,13 @@ func (k *K8SReader) readConfigMap(ctx context.Context) ([]byte, error) {
 		return nil, fmt.Errorf("key %s not found in configmap %s/%s", k.key, k.namespace, k.name)
 	}
 
-	// Return all data as JSON
-	// In a real implementation, we might want to serialize this differently
-	// For now, we'll just return the first key's value or an error if multiple keys exist
+	// When no specific key is requested, return the first key's value if there's exactly one
 	if len(cm.Data) == 0 {
 		return nil, fmt.Errorf("configmap %s/%s is empty", k.namespace, k.name)
 	}
 
 	if len(cm.Data) == 1 {
+		// Return the value of the single key
 		for _, value := range cm.Data {
 			return []byte(value), nil
 		}
@@ -291,7 +272,7 @@ func (k *K8SReader) readSecret(ctx context.Context) ([]byte, error) {
 	if k.clientset == nil {
 		return nil, fmt.Errorf("k8s client not initialized")
 	}
-	
+
 	secret, err := k.clientset.CoreV1().Secrets(k.namespace).Get(ctx, k.name, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get secret %s/%s: %w", k.namespace, k.name, err)
@@ -305,14 +286,13 @@ func (k *K8SReader) readSecret(ctx context.Context) ([]byte, error) {
 		return nil, fmt.Errorf("key %s not found in secret %s/%s", k.key, k.namespace, k.name)
 	}
 
-	// Return all data as JSON
-	// In a real implementation, we might want to serialize this differently
-	// For now, we'll just return the first key's value or an error if multiple keys exist
+	// When no specific key is requested, return the first key's value if there's exactly one
 	if len(secret.Data) == 0 {
 		return nil, fmt.Errorf("secret %s/%s is empty", k.namespace, k.name)
 	}
 
 	if len(secret.Data) == 1 {
+		// Return the value of the single key
 		for _, value := range secret.Data {
 			return value, nil
 		}
@@ -333,6 +313,7 @@ func (k *K8SReader) handleResourceUpdate(ctx context.Context, eventChan chan<- *
 	select {
 	case eventChan <- confEvent:
 	case <-ctx.Done():
+		// Context cancelled, ignore the event
 	}
 }
 
@@ -345,7 +326,11 @@ func createK8SClient() (kubernetes.Interface, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to create in-cluster config: %w", err)
 		}
-		return kubernetes.NewForConfig(config)
+		clientset, err := kubernetes.NewForConfig(config)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create k8s client from in-cluster config: %w", err)
+		}
+		return clientset, nil
 	}
 
 	// Use kubeconfig from environment or default location
@@ -361,10 +346,14 @@ func createK8SClient() (kubernetes.Interface, error) {
 	// Use the current context in kubeconfig
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to build config from kubeconfig: %w", err)
+		return nil, fmt.Errorf("failed to build config from kubeconfig (%s): %w", kubeconfig, err)
 	}
 
-	return kubernetes.NewForConfig(config)
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create k8s client from kubeconfig: %w", err)
+	}
+	return clientset, nil
 }
 
 // getMapKeys returns keys from string map

@@ -1,13 +1,13 @@
 # 总览
 
-这是一个 golang 的配置解析库，用于解析从 file、http、redis 等地方获取的各种类型（JSON、YAML、TOML、XML、INI、ENV、HCL）的配置文件。
+这是一个 golang 的配置解析库，用于解析从 file、http、redis 等地方获取的各种类型（JSON、YAML、TOML、XML、INI、ENV）的配置文件。
 
 ## 架构设计
 
 主要分四大块：
 
 1. 封装 ConfReader, 从各种地方读取配置，同时支持订阅等实时更新的能力，包括文件、HTTP、Redis等
-2. 封装 ConfDecoder，用于解析各种配置文件格式到 map[string]any，包括 JSON、YAML、TOML、XML、INI、ENV、HCL 等
+2. 封装 ConfDecoder，用于解析各种配置文件格式到 map[string]any，包括 JSON、YAML、TOML、XML、INI、ENV 等
 3. 从结构体中解析配置定义，并通过 mapstructure 对应结构体字段进行映射、处理，封装一批常用的解析增强 hook 函数
 4. 封装 Conf，用于封装 ConfReader、ConfDecoder 的实例，提供统一的配置读取和解析接口
 
@@ -25,7 +25,6 @@
 ├──── toml
 ├──── xml
 ├──── ini
-├──── hcl
 ├── examples # 给定一些使用示例，包括几种 reader 的使用方法，包括示例的配置文件
 ├──── file-json # 文件 + JSON 配置示例
 ├──── http-yaml # HTTP + YAML 配置示例，包括基础认证和 SSE 实时更新

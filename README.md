@@ -7,7 +7,7 @@ A flexible, URI-based configuration management library for Go that supports mult
 ## Features
 
 - 🌐 **Multiple Protocols**: Support for HTTP/HTTPS, WebSocket, Redis, and local files
-- 📄 **Multiple Formats**: JSON, YAML, INI, TOML, HCL, and XML configuration formats
+- 📄 **Multiple Formats**: JSON, YAML, INI, TOML, and XML configuration formats
 - 🔄 **Real-time Updates**: Subscribe to configuration changes with automatic reloading
 - 🔌 **Extensible**: Plugin-based architecture for custom readers and decoders
 - ⚡ **Performance**: Efficient parsing with connection pooling and retry mechanisms
@@ -112,7 +112,7 @@ The library automatically detects format from file extensions or can be specifie
 - **YAML**: `.yaml`, `.yml` or `content-type=application/yaml`
 - **INI**: `.ini` or `content-type=text/ini`
 - **TOML**: `.toml` or `content-type=application/toml`
-- **HCL**: `.hcl` or `content-type=application/hcl`
+
 - **XML**: `.xml` or `content-type=application/xml`
 
 ## Examples
@@ -123,7 +123,6 @@ The `examples/` directory contains complete working examples:
 - **HTTP + YAML**: HTTP-based configuration with YAML format and authentication
 - **Redis + INI**: Redis-based configuration with INI format
 - **WebSocket + XML**: Real-time configuration updates via WebSocket with XML format
-
 ### Running Examples
 
 ```bash
@@ -163,7 +162,7 @@ The library follows a modular plugin-based architecture:
 
 - **Configuration Loader**: Main entry point that coordinates readers and decoders
 - **Readers**: Protocol-specific implementations (file, HTTP, Redis, WebSocket)
-- **Decoders**: Format-specific parsers (JSON, YAML, INI, TOML, HCL, XML)
+- **Decoders**: Format-specific parsers (JSON, YAML, INI, TOML, XML)
 - **Event System**: Real-time configuration change notifications
 
 ## Best Practices
