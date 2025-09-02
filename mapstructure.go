@@ -2,6 +2,7 @@ package conf
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"reflect"
 	"regexp"
@@ -15,6 +16,7 @@ var DefaultParserConfig = mapstructure.DecoderConfig{
 	DecodeHook: mapstructure.ComposeDecodeHookFunc(
 		EnvRenderHook(),
 		StringToBoolHook(),
+		StringToSlogLevelHook(),
 		mapstructure.StringToTimeDurationHookFunc(),
 		mapstructure.StringToSliceHookFunc(","),
 	),
@@ -41,6 +43,29 @@ func StringToBoolHook() mapstructure.DecodeHookFuncType {
 			return false, nil
 		default:
 			return false, fmt.Errorf("cannot parse '%s' as boolean", data)
+		}
+	}
+}
+
+// StringToSlogLevelHook 字符串到slog.Level的钩子
+func StringToSlogLevelHook() mapstructure.DecodeHookFuncType {
+	return func(f reflect.Type, t reflect.Type, data any) (any, error) {
+		if f.Kind() != reflect.String || t != reflect.TypeOf(slog.LevelDebug) {
+			return data, nil
+		}
+
+		level := strings.ToLower(strings.TrimSpace(data.(string)))
+		switch level {
+		case "debug", "dbg", "-4":
+			return slog.LevelDebug, nil
+		case "info", "information", "0":
+			return slog.LevelInfo, nil
+		case "warn", "warning", "4":
+			return slog.LevelWarn, nil
+		case "error", "err", "8":
+			return slog.LevelError, nil
+		default:
+			return nil, fmt.Errorf("cannot parse '%s' as slog.Level", data)
 		}
 	}
 }
