@@ -293,8 +293,6 @@ func (r *RedisReader) subscribeKeyspace(ctx context.Context, eventChan chan<- *r
 	// Create keyspace pattern for the specific key
 	keyspacePattern := fmt.Sprintf("__keyspace@%d__:%s", r.config.DB, r.config.Key)
 
-	// Debug: Log subscription details
-	fmt.Printf("Redis: Subscribing to pattern: %s\n", keyspacePattern)
 
 	pubsub := r.client.PSubscribe(ctx, keyspacePattern)
 	defer pubsub.Close()
@@ -308,7 +306,6 @@ func (r *RedisReader) subscribeKeyspace(ctx context.Context, eventChan chan<- *r
 
 	// Send initial read
 	if data, err := r.fetch(ctx); err == nil {
-		fmt.Printf("Redis: Sending initial config event\n")
 		confEvent := reader.NewReadEvent(r.uri, data, nil)
 		select {
 		case eventChan <- confEvent:
@@ -318,28 +315,23 @@ func (r *RedisReader) subscribeKeyspace(ctx context.Context, eventChan chan<- *r
 	}
 
 	// Listen for notifications
-	fmt.Printf("Redis: Starting keyspace notification listener\n")
 	ch := pubsub.Channel()
 	for {
 		select {
 		case <-ctx.Done():
-			fmt.Printf("Redis: Context done, stopping listener\n")
 			return
 		case msg, ok := <-ch:
 			if !ok {
-				fmt.Printf("Redis: Channel closed, stopping listener\n")
 				return
 			}
 
 			// Handle keyspace notification
 			if msg != nil {
-				fmt.Printf("Redis: Received keyspace notification: %+v\n", msg)
 				// Fetch the updated value
 				data, err := r.fetch(ctx)
 				confEvent := reader.NewReadEvent(r.uri, data, err)
 				select {
 				case eventChan <- confEvent:
-					fmt.Printf("Redis: Sent config update event\n")
 				case <-ctx.Done():
 					return
 				}
