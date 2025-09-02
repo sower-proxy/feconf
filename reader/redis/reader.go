@@ -59,12 +59,14 @@ type RedisConfig struct {
 
 // RedisReader implements ConfReader for Redis-based configuration
 type RedisReader struct {
-	uri      string
-	client   *redis.Client
-	config   *RedisConfig
-	mu       sync.RWMutex
-	closed   bool
-	subsChan chan *redis.PubSub
+	uri           string
+	client        *redis.Client
+	config        *RedisConfig
+	mu            sync.RWMutex
+	closed        bool
+	subsChan      chan *redis.PubSub
+	errorCount    int
+	lastErrorTime time.Time
 }
 
 // NewRedisReader creates a new Redis reader
@@ -213,6 +215,15 @@ func (r *RedisReader) fetch(ctx context.Context) ([]byte, error) {
 
 	// Use HGET for hash field operations, GET for regular key operations
 	if r.config.HashField != "" {
+		// Check if hash field exists first
+		exists, err := r.client.HExists(ctx, r.config.Key, r.config.HashField).Result()
+		if err != nil {
+			return nil, fmt.Errorf("failed to check hash field existence: %w", err)
+		}
+		if !exists {
+			return nil, fmt.Errorf("hash field '%s' not found in key '%s'", r.config.HashField, r.config.Key)
+		}
+		
 		result = r.client.HGet(ctx, r.config.Key, r.config.HashField)
 		operationType = "HGET"
 	} else {
@@ -293,7 +304,6 @@ func (r *RedisReader) subscribeKeyspace(ctx context.Context, eventChan chan<- *r
 	// Create keyspace pattern for the specific key
 	keyspacePattern := fmt.Sprintf("__keyspace@%d__:%s", r.config.DB, r.config.Key)
 
-
 	pubsub := r.client.PSubscribe(ctx, keyspacePattern)
 	defer pubsub.Close()
 
@@ -314,6 +324,16 @@ func (r *RedisReader) subscribeKeyspace(ctx context.Context, eventChan chan<- *r
 		}
 	}
 
+	// Circuit breaker parameters
+	const (
+		maxErrors         = 5
+		resetTimeout      = 30 * time.Second
+		backoffMultiplier = 2
+		maxBackoff        = 30 * time.Second
+	)
+
+	backoff := time.Second
+
 	// Listen for notifications
 	ch := pubsub.Channel()
 	for {
@@ -327,8 +347,57 @@ func (r *RedisReader) subscribeKeyspace(ctx context.Context, eventChan chan<- *r
 
 			// Handle keyspace notification
 			if msg != nil {
+				// Check circuit breaker state
+				r.mu.Lock()
+				now := time.Now()
+				if r.errorCount >= maxErrors && now.Sub(r.lastErrorTime) < resetTimeout {
+					r.mu.Unlock()
+					// Circuit breaker is open, wait with backoff
+					select {
+					case <-time.After(backoff):
+						backoff = time.Duration(float64(backoff) * backoffMultiplier)
+						if backoff > maxBackoff {
+							backoff = maxBackoff
+						}
+					case <-ctx.Done():
+						return
+					}
+					continue
+				}
+				r.mu.Unlock()
+
 				// Fetch the updated value
 				data, err := r.fetch(ctx)
+				
+				// Handle hash field not found gracefully
+				if err != nil && strings.Contains(err.Error(), "hash field not found") {
+					r.mu.Lock()
+					r.errorCount++
+					r.lastErrorTime = time.Now()
+					currentErrorCount := r.errorCount
+					r.mu.Unlock()
+					
+					// Create enhanced error with timestamp and context
+					enhancedErr := fmt.Errorf("[%s] hash field '%s' temporarily unavailable (attempt %d/%d): %w", 
+						now.Format(time.RFC3339), r.config.HashField, currentErrorCount, maxErrors, err)
+					
+					confEvent := reader.NewReadEvent(r.uri, nil, enhancedErr)
+					select {
+					case eventChan <- confEvent:
+					case <-ctx.Done():
+						return
+					}
+					continue
+				}
+				
+				// Reset error count on successful fetch
+				if err == nil {
+					r.mu.Lock()
+					r.errorCount = 0
+					backoff = time.Second
+					r.mu.Unlock()
+				}
+				
 				confEvent := reader.NewReadEvent(r.uri, data, err)
 				select {
 				case eventChan <- confEvent:
