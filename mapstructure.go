@@ -19,6 +19,7 @@ var DefaultParserConfig = mapstructure.DecoderConfig{
 		StringToSlogLevelHook(),
 		mapstructure.StringToTimeDurationHookFunc(),
 		mapstructure.StringToSliceHookFunc(","),
+		mapstructure.StringToBasicTypeHookFunc(),
 	),
 	TagName:          "json",
 	WeaklyTypedInput: true,
