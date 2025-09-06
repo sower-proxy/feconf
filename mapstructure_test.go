@@ -672,7 +672,7 @@ func TestDefaultHook(t *testing.T) {
 			}
 
 			// 对于结构体，使用 DeepEqual 比较
-			if tt.fromType.Kind() == reflect.Struct || tt.toType.Kind() == reflect.Struct {
+			if tt.fromType != nil && (tt.fromType.Kind() == reflect.Struct || (tt.toType != nil && tt.toType.Kind() == reflect.Struct)) {
 				if !reflect.DeepEqual(got, tt.want) {
 					t.Errorf("DefaultHook() = %v, want %v", got, tt.want)
 				}
