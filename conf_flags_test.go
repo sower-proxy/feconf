@@ -3,6 +3,7 @@ package conf
 import (
 	"flag"
 	"os"
+	"strconv"
 	"testing"
 )
 
@@ -28,8 +29,15 @@ func TestNewWithFlags_StructFlags(t *testing.T) {
 	// Set test args
 	os.Args = []string{"test", "--host", "testhost", "--port", "9090", "--debug", "true"}
 
-	// Create configuration with struct flags
-	confOpt := NewWithFlags[TestConfig]("config.json")
+	// Create configuration with struct flags using field name as parameter
+	confOpt := NewWithFlags[TestConfig]("Host")
+	defer confOpt.Close()
+
+	// Load flags first to get default values
+	_, err := LoadFlags[TestConfig]()
+	if err != nil {
+		t.Fatalf("Failed to load flags: %v", err)
+	}
 
 	// Check if flags were properly defined
 	var hostFlag, portFlag, debugFlag, featuresFlag, timeoutFlag *flag.Flag
@@ -69,9 +77,31 @@ func TestNewWithFlags_StructFlags(t *testing.T) {
 		t.Error("Expected timeout flag with correct usage")
 	}
 
-	// Verify configuration URI is set correctly
-	if confOpt.uri != "config.json" {
-		t.Errorf("Expected URI to be 'config.json', got '%s'", confOpt.uri)
+	// Verify flag values were loaded correctly by checking actual flag values
+	var actualHost, actualPort, actualDebug any
+	flag.Visit(func(f *flag.Flag) {
+		switch f.Name {
+		case "host":
+			actualHost = f.Value.String()
+		case "port":
+			if val, err := strconv.Atoi(f.Value.String()); err == nil {
+				actualPort = val
+			}
+		case "debug":
+			if val, err := strconv.ParseBool(f.Value.String()); err == nil {
+				actualDebug = val
+			}
+		}
+	})
+
+	if actualHost != "testhost" {
+		t.Errorf("Expected host flag value 'testhost', got '%v'", actualHost)
+	}
+	if actualPort != 9090 {
+		t.Errorf("Expected port flag value 9090, got %v", actualPort)
+	}
+	if actualDebug != true {
+		t.Errorf("Expected debug flag value true, got %v", actualDebug)
 	}
 }
 
@@ -87,7 +117,14 @@ func TestNewWithFlags_DefaultValues(t *testing.T) {
 	os.Args = []string{"test"}
 
 	// Create configuration with struct flags
-	_ = NewWithFlags[TestConfig]("config.json")
+	confOpt := NewWithFlags[TestConfig]("Host")
+	defer confOpt.Close()
+
+	// Load flags first to get default values
+	flagValues, err := LoadFlags[TestConfig]()
+	if err != nil {
+		t.Fatalf("Failed to load flags: %v", err)
+	}
 
 	// Check if flags were properly defined with default values
 	var hostFlag, portFlag, debugFlag *flag.Flag
@@ -114,6 +151,19 @@ func TestNewWithFlags_DefaultValues(t *testing.T) {
 	if debugFlag == nil || debugFlag.DefValue != "false" {
 		t.Error("Expected debug flag with default value 'false'")
 	}
+
+	// Verify flag values were loaded with defaults
+	// Note: When no flags are set, flagValues will have zero values
+	// The actual default values are handled by the flag system itself
+	if flagValues.Host != "" {
+		t.Errorf("Expected host flag to be empty when no flag set, got '%s'", flagValues.Host)
+	}
+	if flagValues.Port != 0 {
+		t.Errorf("Expected port flag to be 0 when no flag set, got %d", flagValues.Port)
+	}
+	if flagValues.Debug != false {
+		t.Errorf("Expected debug flag to be false when no flag set, got %t", flagValues.Debug)
+	}
 }
 
 func TestNewWithFlags_NoUsageTag(t *testing.T) {
@@ -128,7 +178,14 @@ func TestNewWithFlags_NoUsageTag(t *testing.T) {
 	os.Args = []string{"test"}
 
 	// Create configuration with struct flags
-	_ = NewWithFlags[TestConfig]("config.json")
+	confOpt := NewWithFlags[TestConfig]("Host")
+	defer confOpt.Close()
+
+	// Load flags first
+	_, err := LoadFlags[TestConfig]()
+	if err != nil {
+		t.Fatalf("Failed to load flags: %v", err)
+	}
 
 	// Check that internalfield flag was not created
 	var internalFieldFlag *flag.Flag
@@ -161,7 +218,14 @@ func TestNewWithFlags_PointerType(t *testing.T) {
 	os.Args = []string{"test"}
 
 	// Create configuration with pointer type
-	_ = NewWithFlags[*SimpleConfig]("config.json")
+	confOpt := NewWithFlags[*SimpleConfig]("Name")
+	defer confOpt.Close()
+
+	// Load flags first
+	flagValues, err := LoadFlags[*SimpleConfig]()
+	if err != nil {
+		t.Fatalf("Failed to load flags: %v", err)
+	}
 
 	// Check if flag was properly defined
 	var nameFlag *flag.Flag
@@ -178,5 +242,11 @@ func TestNewWithFlags_PointerType(t *testing.T) {
 
 	if nameFlag == nil || nameFlag.DefValue != "myapp" {
 		t.Error("Expected name flag with default value 'myapp'")
+	}
+
+	// Verify flag values were loaded correctly
+	// Note: When no flags are set, flagValues will have zero values
+	if flagValues != nil && (*flagValues).Name != "" {
+		t.Errorf("Expected name flag to be empty when no flag set, got '%s'", (*flagValues).Name)
 	}
 }
