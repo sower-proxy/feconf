@@ -1,4 +1,8 @@
 {
+  "config_uri": "file://./prod-config.json",
+  "app_name": "MyApp-Production",
+  "version": "1.0.0",
+  "log_level": "warn",
   "server": {
     "host": "0.0.0.0",
     "port": 9000,
@@ -6,6 +10,12 @@
   },
   "database": {
     "url": "postgresql://prod-db.example.com:5432/production",
-    "max_connections": 50
+    "max_connections": 50,
+    "timeout": 60
+  },
+  "features": {
+    "enable_cache": true,
+    "enable_metrics": true,
+    "allowed_origins": ["https://myapp.com", "https://api.myapp.com"]
   }
 }

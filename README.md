@@ -1,6 +1,6 @@
 # conf
 
-[![Go Version](https://img.shields.io/badge/go-%3E%3D1.23-blue.svg)](https://golang.org/)
+[![Go Version](https://img.shields.io/badge/go-%3E%3D1.24-blue.svg)](https://golang.org/)
 
 A flexible, URI-based configuration management library for Go that supports multiple protocols, formats, and real-time configuration updates.
 
@@ -54,15 +54,14 @@ func main() {
 ```
 
 For command-line flag support:
+
 ```go
 // Read config URI from -config flag, fallback to default if not provided
 loader := conf.NewWithFlags[Config]("file://./default-config.json")
-
-// Or use custom flag name
-loader := conf.NewWithFlagsNamed[Config]("app-config", "file://./default-config.json")
 ```
 
 For real-time updates:
+
 ```go
 eventChan, _ := loader.Subscribe()
 for event := range eventChan {
@@ -75,21 +74,25 @@ for event := range eventChan {
 ## Supported Protocols
 
 ### File System
+
 ```go
 loader := conf.New[Config]("file:///path/to/config.json")
 ```
 
 ### HTTP/HTTPS
+
 ```go
 loader := conf.New[Config]("https://api.example.com/config.yaml?timeout=30s")
 ```
 
 ### WebSocket
+
 ```go
 loader := conf.New[Config]("wss://realtime.example.com/config?ping_interval=30s")
 ```
 
 ### Redis
+
 ```go
 loader := conf.New[Config]("redis://localhost:6379/config-key?db=1&pool_size=10")
 
@@ -98,6 +101,7 @@ loader := conf.New[Config]("redis://localhost:6379/config-hash#field-name")
 ```
 
 ### Kubernetes ConfigMap/Secret
+
 ```go
 // Read from a ConfigMap (returns first key's value)
 loader := conf.New[Config]("k8s://configmap/default/app-config")
@@ -134,11 +138,9 @@ The `examples/` directory contains complete working examples:
 - **Redis + INI**: Redis-based configuration with INI format
 - **Redis + Hash**: Redis hash field configuration with JSON format
 - **WebSocket + XML**: Real-time configuration updates via WebSocket with XML format
-<<<<<<< Updated upstream
-=======
+- **Kubernetes**: Kubernetes ConfigMap/Secret configuration with YAML format
 - **Flags**: Command-line flag support for configuration URI specification
 
->>>>>>> Stashed changes
 ### Running Examples
 
 ```bash
@@ -159,6 +161,9 @@ cd examples/flags && go run . -config file://./prod-config.json
 
 # WebSocket example (starts a demo WebSocket server)
 cd examples/ws-xml && go run .
+
+# Kubernetes example (requires Kubernetes cluster)
+cd examples/k8s-yaml && ./setup.sh && go run .
 ```
 
 ## Architecture
@@ -198,6 +203,7 @@ The library follows a modular plugin-based architecture:
 ## Advanced Features
 
 ### Custom Mapstructure Configuration
+
 ```go
 loader := conf.New[Config](uri)
 loader.ParserConf.TagName = "config"  // Use 'config' tags instead of 'json'
@@ -205,6 +211,7 @@ loader.ParserConf.ErrorUnused = true  // Error on unused fields
 ```
 
 ### Environment-specific Configuration
+
 ```go
 env := os.Getenv("APP_ENV")
 if env == "" {
@@ -216,6 +223,7 @@ loader := conf.New[Config](uri)
 ```
 
 ### Configuration Hot-reloading with Graceful Shutdown
+
 ```go
 eventChan, err := loader.Subscribe()
 if err != nil {
@@ -233,87 +241,91 @@ go func() {
 }()
 ```
 
-
-
 ## URI Query Parameters
 
 The configuration library supports various special query parameters during URI parsing to customize the behavior of different readers and decoders.
 
 ### Universal Parameters
 
-| Parameter | Type | Default | Description | Example |
-|-----------|------|---------|-------------|---------|
+| Parameter      | Type   | Default             | Description                                         | Example                          |
+| -------------- | ------ | ------------------- | --------------------------------------------------- | -------------------------------- |
 | `content-type` | string | From file extension | Specifies the MIME type to determine decoder format | `?content-type=application/json` |
 
 ### HTTP/HTTPS Parameters
 
-| Parameter | Type | Default | Validation | Description | Example |
-|-----------|------|---------|------------|-------------|---------|
-| `timeout` | duration | `30s` | - | HTTP request timeout duration | `?timeout=60s` |
-| `retry_attempts` | integer | `3` | ≥ 1 | Number of retry attempts for failed requests | `?retry_attempts=5` |
-| `retry_delay` | duration | `1s` | - | Delay between retry attempts | `?retry_delay=2s` |
-| `header_*` | string | - | - | Custom HTTP headers (format: `header_<name>=<value>`) | `?header_Authorization=Bearer%20token` |
-| `tls_insecure` | boolean | `false` | - | Skip TLS certificate verification | `?tls_insecure=true` |
+| Parameter        | Type     | Default | Validation | Description                                           | Example                                |
+| ---------------- | -------- | ------- | ---------- | ----------------------------------------------------- | -------------------------------------- |
+| `timeout`        | duration | `30s`   | -          | HTTP request timeout duration                         | `?timeout=60s`                         |
+| `retry_attempts` | integer  | `3`     | ≥ 1        | Number of retry attempts for failed requests          | `?retry_attempts=5`                    |
+| `retry_delay`    | duration | `1s`    | -          | Delay between retry attempts                          | `?retry_delay=2s`                      |
+| `header_*`       | string   | -       | -          | Custom HTTP headers (format: `header_<name>=<value>`) | `?header_Authorization=Bearer%20token` |
+| `tls_insecure`   | boolean  | `false` | -          | Skip TLS certificate verification                     | `?tls_insecure=true`                   |
 
 ### WebSocket (WS/WSS) Parameters
 
-| Parameter | Type | Default | Validation | Description | Example |
-|-----------|------|---------|------------|-------------|---------|
-| `timeout` | duration | `30s` | - | WebSocket handshake timeout | `?timeout=45s` |
-| `retry_attempts` | integer | `3` | ≥ 1 | Number of connection retry attempts | `?retry_attempts=10` |
-| `retry_delay` | duration | `1s` | - | Delay between connection retry attempts | `?retry_delay=5s` |
-| `ping_interval` | duration | `30s` | - | Interval for sending ping messages | `?ping_interval=60s` |
-| `pong_wait` | duration | `60s` | - | Maximum wait time for pong response | `?pong_wait=120s` |
-| `write_wait` | duration | `10s` | - | Timeout for WebSocket write operations | `?write_wait=15s` |
-| `header_*` | string | - | - | Custom WebSocket headers (format: `header_<name>=<value>`) | `?header_Origin=https://example.com` |
-| `tls_insecure` | boolean | `false` | - | Skip TLS certificate verification for WSS | `?tls_insecure=true` |
+| Parameter        | Type     | Default | Validation | Description                                                | Example                              |
+| ---------------- | -------- | ------- | ---------- | ---------------------------------------------------------- | ------------------------------------ |
+| `timeout`        | duration | `30s`   | -          | WebSocket handshake timeout                                | `?timeout=45s`                       |
+| `retry_attempts` | integer  | `3`     | ≥ 1        | Number of connection retry attempts                        | `?retry_attempts=10`                 |
+| `retry_delay`    | duration | `1s`    | -          | Delay between connection retry attempts                    | `?retry_delay=5s`                    |
+| `ping_interval`  | duration | `30s`   | -          | Interval for sending ping messages                         | `?ping_interval=60s`                 |
+| `pong_wait`      | duration | `60s`   | -          | Maximum wait time for pong response                        | `?pong_wait=120s`                    |
+| `write_wait`     | duration | `10s`   | -          | Timeout for WebSocket write operations                     | `?write_wait=15s`                    |
+| `header_*`       | string   | -       | -          | Custom WebSocket headers (format: `header_<name>=<value>`) | `?header_Origin=https://example.com` |
+| `tls_insecure`   | boolean  | `false` | -          | Skip TLS certificate verification for WSS                  | `?tls_insecure=true`                 |
 
 ### Redis Parameters
 
-| Parameter | Type | Default | Validation | Description | Example |
-|-----------|------|---------|------------|-------------|---------|
-| `db` | integer | `0` | ≥ 0 | Redis database number | `?db=1` |
-| `timeout` | duration | `30s` | - | Redis operation timeout | `?timeout=10s` |
-| `retry_delay` | duration | `1s` | - | Delay between retry attempts | `?retry_delay=500ms` |
-| `max_retries` | integer | `3` | ≥ 0 | Maximum number of retry attempts | `?max_retries=5` |
-| `pool_size` | integer | `10` | > 0 | Redis connection pool size | `?pool_size=20` |
-| `min_idle_conns` | integer | `1` | ≥ 0 | Minimum idle connections in pool | `?min_idle_conns=5` |
-| `tls_insecure` | boolean | `false` | - | Skip TLS certificate verification for REDISS | `?tls_insecure=true` |
+| Parameter        | Type     | Default | Validation | Description                                  | Example              |
+| ---------------- | -------- | ------- | ---------- | -------------------------------------------- | -------------------- |
+| `db`             | integer  | `0`     | ≥ 0        | Redis database number                        | `?db=1`              |
+| `timeout`        | duration | `30s`   | -          | Redis operation timeout                      | `?timeout=10s`       |
+| `retry_delay`    | duration | `1s`    | -          | Delay between retry attempts                 | `?retry_delay=500ms` |
+| `max_retries`    | integer  | `3`     | ≥ 0        | Maximum number of retry attempts             | `?max_retries=5`     |
+| `pool_size`      | integer  | `10`    | > 0        | Redis connection pool size                   | `?pool_size=20`      |
+| `min_idle_conns` | integer  | `1`     | ≥ 0        | Minimum idle connections in pool             | `?min_idle_conns=5`  |
+| `tls_insecure`   | boolean  | `false` | -          | Skip TLS certificate verification for REDISS | `?tls_insecure=true` |
 
 **Hash Field Support**: Use URI fragment (`#field-name`) to read from specific hash fields:
+
 ```
 redis://localhost:6379/user:123?content-type=application/json#profile
 redis://localhost:6379/settings?content-type=application/json#database
 ```
+
 Note: When using hash fields, you must specify `content-type` parameter for format detection.
 
 ## URI Examples
 
 ### HTTP with Custom Parameters
+
 ```
 http://config-server.example.com/app-config.json?timeout=60s&retry_attempts=5&header_Authorization=Bearer%20mytoken
 ```
 
 ### WebSocket with Protocol Configuration
+
 ```
 wss://realtime-config.example.com/config?ping_interval=30s&pong_wait=90s&tls_insecure=false
 ```
 
 ### Redis with Database and Pool Settings
+
 ```
 redis://localhost:6379/my-config-key?db=2&pool_size=15&max_retries=3&timeout=10s
 ```
 
 ### Redis with Hash Field
+
 ```
 redis://localhost:6379/app-settings?db=1&timeout=5s&content-type=application/json#database
 ```
 
 ### File with Content Type Override
+
 ```
 file:///path/to/config.txt?content-type=application/yaml
 ```
-
 
 ## License
 
