@@ -34,10 +34,10 @@ var (
 
 // init registers Redis readers
 func init() {
-	reader.RegisterReader(SchemeRedis, func(uri string) (reader.ConfReader, error) {
+	_ = reader.RegisterReader(SchemeRedis, func(uri string) (reader.ConfReader, error) {
 		return NewRedisReader(uri)
 	})
-	reader.RegisterReader(SchemeRediss, func(uri string) (reader.ConfReader, error) {
+	_ = reader.RegisterReader(SchemeRediss, func(uri string) (reader.ConfReader, error) {
 		return NewRedisReader(uri)
 	})
 }
@@ -223,7 +223,7 @@ func (r *RedisReader) fetch(ctx context.Context) ([]byte, error) {
 		if !exists {
 			return nil, fmt.Errorf("hash field '%s' not found in key '%s'", r.config.HashField, r.config.Key)
 		}
-		
+
 		result = r.client.HGet(ctx, r.config.Key, r.config.HashField)
 		operationType = "HGET"
 	} else {
@@ -368,7 +368,7 @@ func (r *RedisReader) subscribeKeyspace(ctx context.Context, eventChan chan<- *r
 
 				// Fetch the updated value
 				data, err := r.fetch(ctx)
-				
+
 				// Handle hash field not found gracefully
 				if err != nil && strings.Contains(err.Error(), "hash field not found") {
 					r.mu.Lock()
@@ -376,11 +376,11 @@ func (r *RedisReader) subscribeKeyspace(ctx context.Context, eventChan chan<- *r
 					r.lastErrorTime = time.Now()
 					currentErrorCount := r.errorCount
 					r.mu.Unlock()
-					
+
 					// Create enhanced error with timestamp and context
-					enhancedErr := fmt.Errorf("[%s] hash field '%s' temporarily unavailable (attempt %d/%d): %w", 
+					enhancedErr := fmt.Errorf("[%s] hash field '%s' temporarily unavailable (attempt %d/%d): %w",
 						now.Format(time.RFC3339), r.config.HashField, currentErrorCount, maxErrors, err)
-					
+
 					confEvent := reader.NewReadEvent(r.uri, nil, enhancedErr)
 					select {
 					case eventChan <- confEvent:
@@ -389,7 +389,7 @@ func (r *RedisReader) subscribeKeyspace(ctx context.Context, eventChan chan<- *r
 					}
 					continue
 				}
-				
+
 				// Reset error count on successful fetch
 				if err == nil {
 					r.mu.Lock()
@@ -397,7 +397,7 @@ func (r *RedisReader) subscribeKeyspace(ctx context.Context, eventChan chan<- *r
 					backoff = time.Second
 					r.mu.Unlock()
 				}
-				
+
 				confEvent := reader.NewReadEvent(r.uri, data, err)
 				select {
 				case eventChan <- confEvent:

@@ -32,7 +32,7 @@ const (
 
 // init registers k8s reader
 func init() {
-	reader.RegisterReader(SchemeK8S, func(uri string) (reader.ConfReader, error) {
+	_ = reader.RegisterReader(SchemeK8S, func(uri string) (reader.ConfReader, error) {
 		return NewK8SReader(uri)
 	})
 }
@@ -176,7 +176,7 @@ func (k *K8SReader) Subscribe(ctx context.Context) (<-chan *reader.ReadEvent, er
 	eventChan := make(chan *reader.ReadEvent, 1)
 
 	// Set up event handlers
-	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, _ = informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj any) {
 			k.handleResourceUpdate(ctx, eventChan)
 		},

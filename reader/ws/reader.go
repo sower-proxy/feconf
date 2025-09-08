@@ -36,10 +36,10 @@ const (
 
 // init registers WebSocket readers
 func init() {
-	reader.RegisterReader(SchemeWS, func(uri string) (reader.ConfReader, error) {
+	_ = reader.RegisterReader(SchemeWS, func(uri string) (reader.ConfReader, error) {
 		return NewWSReader(uri)
 	})
-	reader.RegisterReader(SchemeWSS, func(uri string) (reader.ConfReader, error) {
+	_ = reader.RegisterReader(SchemeWSS, func(uri string) (reader.ConfReader, error) {
 		return NewWSReader(uri)
 	})
 }
@@ -186,7 +186,7 @@ func (w *WSReader) readOnce(ctx context.Context) ([]byte, error) {
 	defer conn.Close()
 
 	// Set read deadline
-	conn.SetReadDeadline(time.Now().Add(w.config.Timeout))
+	_ = conn.SetReadDeadline(time.Now().Add(w.config.Timeout))
 
 	// Read one message
 	_, data, err := conn.ReadMessage()
@@ -240,9 +240,9 @@ func (w *WSReader) handleWSConnection(ctx context.Context, eventChan chan<- *rea
 	defer conn.Close()
 
 	// Set up ping/pong handlers
-	conn.SetReadDeadline(time.Now().Add(w.config.PongWait))
+	_ = conn.SetReadDeadline(time.Now().Add(w.config.PongWait))
 	conn.SetPongHandler(func(string) error {
-		conn.SetReadDeadline(time.Now().Add(w.config.PongWait))
+		_ = conn.SetReadDeadline(time.Now().Add(w.config.PongWait))
 		return nil
 	})
 
@@ -257,7 +257,7 @@ func (w *WSReader) handleWSConnection(ctx context.Context, eventChan chan<- *rea
 		for {
 			select {
 			case <-ticker.C:
-				conn.SetWriteDeadline(time.Now().Add(w.config.WriteWait))
+				_ = conn.SetWriteDeadline(time.Now().Add(w.config.WriteWait))
 				if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 					return
 				}

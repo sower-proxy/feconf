@@ -14,7 +14,7 @@ const (
 
 // init registers YAML decoder
 func init() {
-	decoder.RegisterDecoder(
+	_ = decoder.RegisterDecoder(
 		FormatYAML,
 		NewYAMLDecoder(),
 		[]string{".yaml", ".yml"},

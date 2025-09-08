@@ -178,7 +178,7 @@ func TestK8SReader_Read_NotImplemented(t *testing.T) {
 		name:         "test-config",
 		clientset:    nil, // This will cause a specific error when trying to use it
 	}
-	
+
 	ctx := context.Background()
 	_, err := r.Read(ctx)
 	// We expect an error since we're not connected to a real k8s cluster

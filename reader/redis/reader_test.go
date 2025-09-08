@@ -91,7 +91,7 @@ func TestRedisReader_Read(t *testing.T) {
 	// Setup test data
 	testKey := "config:app"
 	testValue := `{"app": "test", "version": "1.0"}`
-	s.Set(testKey, testValue)
+	_ = s.Set(testKey, testValue)
 
 	// Create reader
 	uri := fmt.Sprintf("redis://%s/%s", s.Addr(), testKey)
@@ -223,7 +223,7 @@ func TestRedisReader_Subscribe(t *testing.T) {
 	testKey := "config:app"
 	testValue1 := `{"app": "test", "version": "1.0"}`
 	testValue2 := `{"app": "test", "version": "2.0"}`
-	s.Set(testKey, testValue1)
+	_ = s.Set(testKey, testValue1)
 
 	// Create reader
 	uri := fmt.Sprintf("redis://%s/%s", s.Addr(), testKey)
@@ -258,7 +258,7 @@ func TestRedisReader_Subscribe(t *testing.T) {
 	// Update the key
 	go func() {
 		time.Sleep(100 * time.Millisecond)
-		s.Set(testKey, testValue2)
+		_ = s.Set(testKey, testValue2)
 	}()
 
 	// Wait for update event

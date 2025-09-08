@@ -32,10 +32,10 @@ const (
 
 // init registers HTTP readers
 func init() {
-	reader.RegisterReader(SchemeHTTP, func(uri string) (reader.ConfReader, error) {
+	_ = reader.RegisterReader(SchemeHTTP, func(uri string) (reader.ConfReader, error) {
 		return NewHTTPReader(uri)
 	})
-	reader.RegisterReader(SchemeHTTPS, func(uri string) (reader.ConfReader, error) {
+	_ = reader.RegisterReader(SchemeHTTPS, func(uri string) (reader.ConfReader, error) {
 		return NewHTTPReader(uri)
 	})
 }

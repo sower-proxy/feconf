@@ -1,8 +1,10 @@
 package conf
 
 import (
+	"context"
 	"flag"
 	"fmt"
+	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
@@ -11,44 +13,80 @@ import (
 )
 
 // NewWithFlags creates a configuration loader that reads URI from command-line flags
-// If no flag is provided or the flag value is empty, uriOrField is used
+// If uriOrFlag is a valid URI, it will be used as the configuration source
+// If uriOrFlag is not a URI, it will be treated as a flag name for configuration
 // It also parses the struct type T and adds flags for fields with 'usage' tag
-func NewWithFlags[T any](uriOrField string) *ConfOpt[T] {
-	// Use LoadFlags to parse struct fields and command-line flags
-	flagValues, _ := LoadFlags[T]()
+func NewWithFlags[T any](uriOrFlag string) *ConfOpt[T] {
+	return NewWithFlagsCtx[T](context.Background(), uriOrFlag)
+}
 
-	// Get the actual config URI value if the flag was set
-	if f := flag.Lookup(strings.ToLower(uriOrField)); f != nil {
-		uriOrField = f.Value.String()
+// NewWithFlagsCtx creates a configuration loader that reads URI from command-line flags with context support
+// If uriOrFlag is a valid URI, it will be used as the configuration source
+// If uriOrFlag is not a URI, it will be treated as a flag name for configuration
+// It also parses the struct type T and adds flags for fields with 'usage' tag
+// The context can be used for cancellation or timeout during flag parsing
+func NewWithFlagsCtx[T any](ctx context.Context, uriOrFlag string) *ConfOpt[T] {
+	isURI := isValidURI(uriOrFlag)
+	if !isURI && flag.Lookup(strings.ToLower(uriOrFlag)) == nil {
+		flag.String(strings.ToLower(uriOrFlag), "", "Configuration URI")
+	}
+
+	// Use LoadFlagsCtx to parse struct fields and command-line flags with context
+	var flagValues T
+	_ = LoadFlagsCtx(ctx, &flagValues)
+
+	if !isURI {
+		// Get the flag value after parsing
+		if f := flag.Lookup(strings.ToLower(uriOrFlag)); f != nil {
+			uriOrFlag = f.Value.String()
+		}
 	}
 
 	// Create a copy of DefaultParserConfig and add default values from flags
 	parserConfig := DefaultParserConfig
 	parserConfig.DecodeHook = mapstructure.ComposeDecodeHookFunc(
-		FlagDefaultHook(flagValues),
+		flagOverwriteHook(&flagValues),
 		DefaultParserConfig.DecodeHook,
 	)
 
 	return &ConfOpt[T]{
-		uri:        uriOrField,
+		uri:        uriOrFlag,
 		ParserConf: parserConfig,
 	}
 }
 
 // LoadFlags parses struct fields and adds command-line flags for fields with 'usage' tag,
-// parses command-line flags, maps flag values to the struct, and returns a pointer to the initialized struct
+// parses command-line flags, maps flag values to the struct, and modifies the provided struct pointer
 // This is a public entry function for flag parsing functionality
-func LoadFlags[T any]() (*T, error) {
+func LoadFlags[T any](result *T) error {
+	return LoadFlagsCtx(context.Background(), result)
+}
+
+// LoadFlagsCtx parses struct fields and adds command-line flags for fields with 'usage' tag with context support,
+// parses command-line flags, maps flag values to the struct, and modifies the provided struct pointer
+// The context can be used for cancellation or timeout during flag parsing
+func LoadFlagsCtx[T any](ctx context.Context, config *T) error {
+	// Check if context is cancelled before starting
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
 	// Parse struct fields and add flags for fields with usage tag
-	parseStructFlags[T]()
+	parseStructFlagsCtx[T](ctx)
 
 	// Parse flags if not already parsed
 	if !flag.Parsed() {
 		flag.Parse()
 	}
 
-	// Create a zero value of T
-	var result T
+	// Check if context is cancelled after parsing
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
 
 	// Create a map to store flag values
 	flagValues := make(map[string]any)
@@ -60,7 +98,7 @@ func LoadFlags[T any]() (*T, error) {
 
 	// Use mapstructure to decode flag values to struct
 	decoderConfig := &mapstructure.DecoderConfig{
-		Result:           &result,
+		Result:           config,
 		WeaklyTypedInput: true,
 		TagName:          "default",
 	}
@@ -68,29 +106,27 @@ func LoadFlags[T any]() (*T, error) {
 	mapDecoder, err := mapstructure.NewDecoder(decoderConfig)
 	if err != nil {
 		// If decoder creation fails, return error
-		return nil, fmt.Errorf("failed to create mapstructure decoder: %w", err)
+		return fmt.Errorf("failed to create mapstructure decoder: %w", err)
 	}
 
 	// Decode flag values to struct
 	if err := mapDecoder.Decode(flagValues); err != nil {
 		// If decoding fails, return error
-		return nil, fmt.Errorf("failed to decode flag values to struct: %w", err)
+		return fmt.Errorf("failed to decode flag values to struct: %w", err)
 	}
 
-	return &result, nil
+	return nil
 }
 
-// FlagDefaultHook creates a decode hook that provides default values from flag-parsed struct
-func FlagDefaultHook(flagValues any) mapstructure.DecodeHookFuncType {
+// flagOverwriteHook creates a decode hook that overwrites config file values with flag values
+func flagOverwriteHook(flagValues any) mapstructure.DecodeHookFuncType {
 	return func(f reflect.Type, t reflect.Type, data any) (any, error) {
-		// If data is zero value, try to get default value from flagValues
-		if isZeroValue(data) {
-			if defaultVal := getFlagDefaultValue(flagValues, t); defaultVal != nil {
-				return defaultVal, nil
-			}
+		// Always try to get flag value to overwrite config file value
+		if flagVal := getFlagDefaultValue(flagValues, t); flagVal != nil {
+			return flagVal, nil
 		}
 
-		// If data is not zero value, or no default found, return original data
+		// If no flag value found, return original data from config file
 		return data, nil
 	}
 }
@@ -129,8 +165,32 @@ func getFlagDefaultValue(flagValues any, targetType reflect.Type) any {
 	return nil
 }
 
-// parseStructFlags parses struct fields and adds flags for fields with usage tag
-func parseStructFlags[T any]() {
+// isValidURI checks if the given string is a valid URI
+func isValidURI(str string) bool {
+	if str == "" {
+		return false
+	}
+
+	// Try to parse as URL
+	u, err := url.Parse(str)
+	if err != nil {
+		return false
+	}
+
+	// Check if it has a scheme (http, https, file, etc.)
+	return u.Scheme != ""
+}
+
+// parseStructFlagsCtx parses struct fields and adds flags for fields with usage tag with context support
+// The context can be used for cancellation or timeout during flag parsing
+func parseStructFlagsCtx[T any](ctx context.Context) {
+	// Check if context is cancelled before starting
+	select {
+	case <-ctx.Done():
+		return
+	default:
+	}
+
 	var zero T
 	typ := reflect.TypeOf(zero)
 
@@ -146,6 +206,13 @@ func parseStructFlags[T any]() {
 
 	// Iterate through struct fields
 	for i := 0; i < typ.NumField(); i++ {
+		// Check if context is cancelled during iteration
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
 		field := typ.Field(i)
 
 		// Skip unexported fields

@@ -14,7 +14,7 @@ const (
 
 // init registers XML decoder
 func init() {
-	decoder.RegisterDecoder(
+	_ = decoder.RegisterDecoder(
 		FormatXML,
 		NewXMLDecoder(),
 		[]string{".xml"},
@@ -77,19 +77,19 @@ type xmlNode struct {
 // toMap converts xmlDoc to map[string]any
 func (doc *xmlDoc) toMap() map[string]any {
 	result := make(map[string]any)
-	
+
 	// Add attributes if any
 	for _, attr := range doc.Attrs {
 		result["@"+attr.Name.Local] = attr.Value
 	}
-	
+
 	// Process nodes
 	nodeMap := make(map[string][]xmlNode)
 	for _, node := range doc.Nodes {
 		key := node.XMLName.Local
 		nodeMap[key] = append(nodeMap[key], node)
 	}
-	
+
 	for key, nodes := range nodeMap {
 		if len(nodes) == 1 {
 			result[key] = nodes[0].toValue()
@@ -101,7 +101,7 @@ func (doc *xmlDoc) toMap() map[string]any {
 			result[key] = values
 		}
 	}
-	
+
 	return result
 }
 
@@ -110,19 +110,19 @@ func (node *xmlNode) toValue() any {
 	// If has child nodes, convert to map
 	if len(node.Nodes) > 0 {
 		result := make(map[string]any)
-		
+
 		// Add attributes if any
 		for _, attr := range node.Attrs {
 			result["@"+attr.Name.Local] = attr.Value
 		}
-		
+
 		// Process child nodes
 		nodeMap := make(map[string][]xmlNode)
 		for _, child := range node.Nodes {
 			key := child.XMLName.Local
 			nodeMap[key] = append(nodeMap[key], child)
 		}
-		
+
 		for key, children := range nodeMap {
 			if len(children) == 1 {
 				result[key] = children[0].toValue()
@@ -134,10 +134,10 @@ func (node *xmlNode) toValue() any {
 				result[key] = values
 			}
 		}
-		
+
 		return result
 	}
-	
+
 	// Otherwise return content as string
 	return node.Content
 }

@@ -14,7 +14,7 @@ const (
 
 // init registers JSON decoder
 func init() {
-	decoder.RegisterDecoder(
+	_ = decoder.RegisterDecoder(
 		FormatJSON,
 		NewJSONDecoder(),
 		[]string{".json"},

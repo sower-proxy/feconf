@@ -14,7 +14,7 @@ const (
 
 // init registers TOML decoder
 func init() {
-	decoder.RegisterDecoder(
+	_ = decoder.RegisterDecoder(
 		FormatTOML,
 		NewTOMLDecoder(),
 		[]string{".toml"},

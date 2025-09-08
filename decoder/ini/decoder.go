@@ -14,7 +14,7 @@ const (
 
 // init registers INI decoder
 func init() {
-	decoder.RegisterDecoder(
+	_ = decoder.RegisterDecoder(
 		FormatINI,
 		NewINIDecoder(),
 		[]string{".ini", ".cfg", ".conf"},

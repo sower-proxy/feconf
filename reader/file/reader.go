@@ -20,7 +20,7 @@ const (
 
 // init registers file reader
 func init() {
-	reader.RegisterReader(SchemeFile, func(uri string) (reader.ConfReader, error) {
+	_ = reader.RegisterReader(SchemeFile, func(uri string) (reader.ConfReader, error) {
 		return NewFileReader(uri)
 	})
 }

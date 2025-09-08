@@ -146,7 +146,7 @@ func TestFileReader_Subscribe(t *testing.T) {
 	go func() {
 		time.Sleep(100 * time.Millisecond)
 		updatedData := `{"updated": true}`
-		if err := os.WriteFile(tmpFile.Name(), []byte(updatedData), 0644); err != nil {
+		if err := os.WriteFile(tmpFile.Name(), []byte(updatedData), 0o644); err != nil {
 			t.Errorf("Failed to update file: %v", err)
 		}
 	}()
@@ -319,10 +319,12 @@ func TestFileReader_MalformedFile(t *testing.T) {
 	tmpFile.Close()
 
 	// Change permissions to make file unreadable
-	if err := os.Chmod(tmpFile.Name(), 0000); err != nil {
+	if err := os.Chmod(tmpFile.Name(), 0o000); err != nil {
 		t.Fatalf("Failed to change file permissions: %v", err)
 	}
-	defer os.Chmod(tmpFile.Name(), 0644) // Restore permissions for cleanup
+	defer func() {
+		_ = os.Chmod(tmpFile.Name(), 0o644) // Restore permissions for cleanup
+	}()
 
 	uri := "file://" + tmpFile.Name()
 	fileReader, err := NewFileReader(uri)
