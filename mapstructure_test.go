@@ -9,7 +9,7 @@ import (
 )
 
 func TestStringToBoolHook(t *testing.T) {
-	hook := StringToBoolHook()
+	hook := HookFuncStringToBool()
 
 	tests := []struct {
 		name     string
@@ -254,7 +254,7 @@ func TestStringToBoolHookIntegration(t *testing.T) {
 }
 
 func TestStringToSlogLevelHook(t *testing.T) {
-	hook := StringToSlogLevelHook()
+	hook := HookFuncStringToSlogLevel()
 
 	tests := []struct {
 		name     string
@@ -521,7 +521,7 @@ func TestStringToSlogLevelHookIntegration(t *testing.T) {
 }
 
 func TestDefaultHook(t *testing.T) {
-	hook := DefaultHook()
+	hook := HookFuncDefault()
 
 	type testStruct struct {
 		Name string

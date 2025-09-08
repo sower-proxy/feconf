@@ -14,10 +14,10 @@ import (
 // DefaultParserConfig 默认解析器配置
 var DefaultParserConfig = mapstructure.DecoderConfig{
 	DecodeHook: mapstructure.ComposeDecodeHookFunc(
-		DefaultHook(),
-		EnvRenderHook(),
-		StringToBoolHook(),
-		StringToSlogLevelHook(),
+		HookFuncDefault(),
+		HookFuncEnvRender(),
+		HookFuncStringToBool(),
+		HookFuncStringToSlogLevel(),
 		mapstructure.StringToTimeDurationHookFunc(),
 		mapstructure.StringToSliceHookFunc(","),
 		mapstructure.StringToBasicTypeHookFunc(),
@@ -31,8 +31,8 @@ var DefaultParserConfig = mapstructure.DecoderConfig{
 	},
 }
 
-// StringToBoolHook 字符串和数字到布尔值的钩子
-func StringToBoolHook() mapstructure.DecodeHookFuncType {
+// HookFuncStringToBool 字符串和数字到布尔值的钩子
+func HookFuncStringToBool() mapstructure.DecodeHookFuncType {
 	return func(f reflect.Type, t reflect.Type, data any) (any, error) {
 		if t.Kind() != reflect.Bool {
 			return data, nil
@@ -70,8 +70,8 @@ func StringToBoolHook() mapstructure.DecodeHookFuncType {
 	}
 }
 
-// StringToSlogLevelHook 字符串和数字到slog.Level的钩子
-func StringToSlogLevelHook() mapstructure.DecodeHookFuncType {
+// HookFuncStringToSlogLevel 字符串和数字到slog.Level的钩子
+func HookFuncStringToSlogLevel() mapstructure.DecodeHookFuncType {
 	return func(f reflect.Type, t reflect.Type, data any) (any, error) {
 		if t != reflect.TypeOf(slog.LevelDebug) {
 			return data, nil
@@ -129,8 +129,8 @@ func StringToSlogLevelHook() mapstructure.DecodeHookFuncType {
 	}
 }
 
-// EnvRenderHook 环境变量渲染钩子
-func EnvRenderHook() mapstructure.DecodeHookFuncType {
+// HookFuncEnvRender 环境变量渲染钩子
+func HookFuncEnvRender() mapstructure.DecodeHookFuncType {
 	return func(f reflect.Type, t reflect.Type, data any) (any, error) {
 		if f.Kind() != reflect.String {
 			return data, nil
@@ -183,8 +183,8 @@ func renderEnv(value string) string {
 	return result
 }
 
-// DefaultHook 默认值钩子，当其他钩子都无法处理时提供默认值
-func DefaultHook() mapstructure.DecodeHookFuncType {
+// HookFuncDefault 默认值钩子，当其他钩子都无法处理时提供默认值
+func HookFuncDefault() mapstructure.DecodeHookFuncType {
 	return func(f reflect.Type, t reflect.Type, data any) (any, error) {
 		// 如果数据为零值，根据目标类型返回默认值
 		if isZeroValue(data) {
