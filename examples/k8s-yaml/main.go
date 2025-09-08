@@ -12,7 +12,7 @@ import (
 )
 
 type Config struct {
-	App     AppConfig     `yaml:"app"`
+	App      AppConfig      `yaml:"app"`
 	Database DatabaseConfig `yaml:"database"`
 	Features FeaturesConfig `yaml:"features"`
 }
@@ -25,11 +25,11 @@ type AppConfig struct {
 }
 
 type DatabaseConfig struct {
-	Host            string `yaml:"host"`
-	Port            int    `yaml:"port"`
-	Name            string `yaml:"name"`
-	MaxConnections  int    `yaml:"max_connections"`
-	ConnectionTimeout int `yaml:"connection_timeout"`
+	Host              string `yaml:"host"`
+	Port              int    `yaml:"port"`
+	Name              string `yaml:"name"`
+	MaxConnections    int    `yaml:"max_connections"`
+	ConnectionTimeout int    `yaml:"connection_timeout"`
 }
 
 type FeaturesConfig struct {

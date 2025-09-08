@@ -13,7 +13,7 @@ import (
 
 func main() {
 	fmt.Println("=== HTTP + YAML 配置示例 ===")
-	
+
 	// 启动配置服务器（后台运行）
 	fmt.Println("启动配置服务器...")
 	go runServer()
@@ -23,7 +23,7 @@ func main() {
 	fmt.Println("运行基础配置示例...")
 	runBasicExample()
 
-	// 运行认证示例  
+	// 运行认证示例
 	fmt.Println("运行认证订阅示例... (需要约20秒)")
 	runAuthExample()
 
@@ -44,9 +44,9 @@ func runBasicExample() {
 
 	fmt.Println("✅ 基础配置加载成功!")
 	fmt.Printf("  关键配置信息:\n")
-	fmt.Printf("    应用: %s v%s (%s)\n", 
+	fmt.Printf("    应用: %s v%s (%s)\n",
 		config.App.Name, config.App.Version, config.App.Environment)
-	fmt.Printf("    服务器: %s:%d (调试: %t)\n", 
+	fmt.Printf("    服务器: %s:%d (调试: %t)\n",
 		config.Server.Host, config.Server.Port, config.Server.Debug)
 	fmt.Printf("    数据库: %s\n", config.Database.Primary.URL)
 	fmt.Printf("    从库数量: %d\n", len(config.Database.Replicas))
@@ -61,7 +61,7 @@ func runAuthExample() {
 	defer loader.Close()
 
 	fmt.Println("🔐 启动认证配置订阅...")
-	
+
 	// 订阅配置变更
 	eventChan, err := loader.Subscribe()
 	if err != nil {
@@ -98,9 +98,9 @@ func runAuthExample() {
 				fmt.Printf("  时间: %s\n", event.Timestamp.Format("15:04:05"))
 				fmt.Printf("  来源: %s\n", event.SourceURI)
 				fmt.Printf("  关键配置变更:\n")
-				fmt.Printf("    应用: %s v%s (%s)\n", 
+				fmt.Printf("    应用: %s v%s (%s)\n",
 					event.Config.App.Name, event.Config.App.Version, event.Config.App.Environment)
-				fmt.Printf("    服务器: %s:%d (调试: %t)\n", 
+				fmt.Printf("    服务器: %s:%d (调试: %t)\n",
 					event.Config.Server.Host, event.Config.Server.Port, event.Config.Server.Debug)
 				fmt.Printf("    数据库: %s\n", event.Config.Database.Primary.URL)
 				fmt.Printf("    从库数量: %d\n", len(event.Config.Database.Replicas))
@@ -112,4 +112,3 @@ func runAuthExample() {
 		}
 	}
 }
-
