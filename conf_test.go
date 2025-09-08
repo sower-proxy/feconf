@@ -102,7 +102,13 @@ func TestGetFlagDefaultValue(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := getFlagDefaultValue(tt.flagValues, tt.targetType); got != tt.want {
+			var flagValues *testStruct
+			if tt.flagValues != nil {
+				if val, ok := tt.flagValues.(*testStruct); ok {
+					flagValues = val
+				}
+			}
+			if got := getFlagDefaultValue(flagValues, tt.targetType); got != tt.want {
 				t.Errorf("getFlagDefaultValue() = %v, want %v", got, tt.want)
 			}
 		})
@@ -182,5 +188,31 @@ func TestNewWithFlagsCtx_ContextCancellation(t *testing.T) {
 	err := LoadFlagsCtx(ctx, &config)
 	if err != context.Canceled {
 		t.Errorf("Expected context.Canceled error, got %v", err)
+	}
+}
+
+func TestConfOpt_LoadCtx_ContextCancellation(t *testing.T) {
+	// Create cancelled context
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	// Test LoadCtx with cancelled context
+	confOpt := New[TestConfig]("invalid://uri")
+	defer confOpt.Close()
+
+	var config TestConfig
+	err := confOpt.LoadCtx(ctx, &config)
+	if err != context.Canceled {
+		t.Errorf("Expected context.Canceled error, got %v", err)
+	}
+}
+
+func TestConfOpt_LoadCtx_NilPointer(t *testing.T) {
+	confOpt := New[TestConfig]("invalid://uri")
+	defer confOpt.Close()
+
+	err := confOpt.LoadCtx(context.Background(), nil)
+	if err == nil {
+		t.Error("Expected error for nil pointer, got nil")
 	}
 }

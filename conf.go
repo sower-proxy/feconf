@@ -153,6 +153,27 @@ func (c *ConfOpt[T]) ParseCtx(ctx context.Context) (*T, error) {
 	return &result, nil
 }
 
+// Load loads configuration and unmarshals it to the provided object
+func (c *ConfOpt[T]) Load(obj *T) error {
+	return c.LoadCtx(context.Background(), obj)
+}
+
+// LoadCtx loads configuration with context and unmarshals it to the provided object
+func (c *ConfOpt[T]) LoadCtx(ctx context.Context, obj *T) error {
+	// Check if context is cancelled before starting
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
+	if err := c.loadAndDecode(ctx); err != nil {
+		return err
+	}
+
+	return c.decodeToStruct(obj)
+}
+
 type ConfEvent[T any] struct {
 	SourceURI string    `json:"source_uri"`
 	Timestamp time.Time `json:"timestamp"`
