@@ -30,7 +30,8 @@ type DatabaseConfig struct {
 func main() {
 	// Load configuration from file (use absolute path with extension)
 	loader := conf.New[Config]("file://./config.json")
-	config, err := loader.Load()
+	var config Config
+	err := loader.Load(&config)
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
@@ -86,5 +87,4 @@ func main() {
 
 	// Wait for context timeout or interruption
 	<-ctx.Done()
-
 }

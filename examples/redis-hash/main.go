@@ -36,13 +36,14 @@ func main() {
 
 	// Load initial configuration
 	fmt.Println("📥 Loading initial configuration...")
-	config, err := loader.Load()
+	var config DatabaseConfig
+	err := loader.Load(&config)
 	if err != nil {
 		log.Fatalf("❌ Failed to load config: %v", err)
 	}
 
 	fmt.Println("✅ Configuration loaded successfully!")
-	printConfig(*config)
+	printConfig(config)
 
 	// Subscribe to configuration changes
 	fmt.Println("🔄 Subscribing to configuration changes...")

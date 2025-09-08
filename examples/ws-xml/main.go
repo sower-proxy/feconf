@@ -50,7 +50,8 @@ func main() {
 	defer loader.Close()
 
 	fmt.Println("🔄 加载配置...")
-	config, err := loader.Load()
+	var config Config
+	err := loader.Load(&config)
 	if err != nil {
 		fmt.Printf("❌ 配置加载失败: %v\n", err)
 		return

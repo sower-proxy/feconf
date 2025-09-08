@@ -36,7 +36,8 @@ func runBasicExample() {
 	loader := conf.New[Config](configURI)
 	defer loader.Close()
 
-	config, err := loader.Load()
+	var config Config
+	err := loader.Load(&config)
 	if err != nil {
 		fmt.Printf("❌ 基础示例失败: %v\n", err)
 		return

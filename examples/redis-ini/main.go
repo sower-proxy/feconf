@@ -46,7 +46,8 @@ func main() {
 	c := conf.New[Config]("redis://localhost:6379/config?db=0&content-type=text/ini")
 
 	// Load initial config
-	cfg, err := c.Load()
+	var cfg Config
+	err := c.Load(&cfg)
 	if err != nil {
 		log.Printf("Failed to load config: %v", err)
 		log.Println("Make sure Redis is running on localhost:6379 and key 'config' contains valid INI data")
@@ -80,7 +81,8 @@ func main() {
 			return
 
 		case <-ticker.C:
-			newCfg, err := c.Load()
+			var newCfg Config
+			err := c.Load(&newCfg)
 			if err != nil {
 				log.Printf("❌ Failed to reload config: %v", err)
 				continue

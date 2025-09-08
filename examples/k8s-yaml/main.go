@@ -43,7 +43,8 @@ func main() {
 	// Format: k8s://[resource-type]/[namespace]/[name]/[key]
 	// Example: k8s://configmap/default/my-app-config/config.yaml
 	loader := conf.New[Config]("k8s://configmap/default/my-app-config/config.yaml")
-	config, err := loader.Load()
+	var config Config
+	err := loader.Load(&config)
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
