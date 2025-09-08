@@ -118,8 +118,45 @@ func LoadFlagsCtx[T any](ctx context.Context, config *T) error {
 	return nil
 }
 
+// LoadWithFlags loads configuration from URI or flag and unmarshals it to the provided object
+// If uriOrFlag is a valid URI, it will be used as the configuration source
+// If uriOrFlag is not a URI, it will be treated as a flag name for configuration
+// It also parses the struct type T and adds flags for fields with 'usage' tag
+func LoadWithFlags[T any](obj *T, uriOrFlag string) error {
+	return LoadWithFlagsCtx(context.Background(), obj, uriOrFlag)
+}
+
+// LoadWithFlagsCtx loads configuration from URI or flag with context and unmarshals it to the provided object
+// If uriOrFlag is a valid URI, it will be used as the configuration source
+// If uriOrFlag is not a URI, it will be treated as a flag name for configuration
+// It also parses the struct type T and adds flags for fields with 'usage' tag
+// The context can be used for cancellation or timeout during loading
+func LoadWithFlagsCtx[T any](ctx context.Context, obj *T, uriOrFlag string) error {
+	// Check if context is cancelled before starting
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
+	// Use NewWithFlagsCtx to create configuration option with flag support
+	confOpt := NewWithFlagsCtx[T](ctx, uriOrFlag)
+
+	// Load and decode configuration
+	if err := confOpt.loadAndDecode(ctx); err != nil {
+		return fmt.Errorf("failed to load and decode configuration: %w", err)
+	}
+
+	// Decode to the provided struct
+	if err := confOpt.decodeToStruct(obj); err != nil {
+		return fmt.Errorf("failed to decode to struct: %w", err)
+	}
+
+	return nil
+}
+
 // flagOverwriteHook creates a decode hook that overwrites config file values with flag values
-func flagOverwriteHook(flagValues any) mapstructure.DecodeHookFuncType {
+func flagOverwriteHook[T any](flagValues *T) mapstructure.DecodeHookFuncType {
 	return func(f reflect.Type, t reflect.Type, data any) (any, error) {
 		// Always try to get flag value to overwrite config file value
 		if flagVal := getFlagDefaultValue(flagValues, t); flagVal != nil {
@@ -132,7 +169,7 @@ func flagOverwriteHook(flagValues any) mapstructure.DecodeHookFuncType {
 }
 
 // getFlagDefaultValue extracts default value from flagValues struct for a given type
-func getFlagDefaultValue(flagValues any, targetType reflect.Type) any {
+func getFlagDefaultValue[T any](flagValues *T, targetType reflect.Type) any {
 	if flagValues == nil {
 		return nil
 	}

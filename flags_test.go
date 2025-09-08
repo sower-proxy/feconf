@@ -329,3 +329,26 @@ func TestParseStructFlagsCtx_Timeout(t *testing.T) {
 		t.Errorf("Expected no flags to be created with timed out context, got %d", flagCount)
 	}
 }
+
+func TestLoadWithFlags_ContextCancellation(t *testing.T) {
+	// Reset flag set for clean test
+	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+
+	// Save original args and restore them after test
+	originalArgs := os.Args
+	defer func() { os.Args = originalArgs }()
+
+	// Set test args
+	os.Args = []string{"test"}
+
+	// Create cancelled context
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	// Test LoadWithFlagsCtx with cancelled context
+	var config TestConfig
+	err := LoadWithFlagsCtx(ctx, &config, "file:///tmp/config.json")
+	if err != context.Canceled {
+		t.Errorf("Expected context.Canceled error, got %v", err)
+	}
+}
