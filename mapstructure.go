@@ -103,7 +103,12 @@ func HookFuncStringToSlogLevel() mapstructure.DecodeHookFuncType {
 			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 				levelValue = val.Int()
 			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-				levelValue = int64(val.Uint())
+				// 检查 uint64 到 int64 的转换是否会导致溢出
+				uVal := val.Uint()
+				if uVal > (^uint64(0) >> 1) {
+					return nil, fmt.Errorf("uint64 value %d is too large to convert to int64", uVal)
+				}
+				levelValue = int64(uVal)
 			case reflect.Float32, reflect.Float64:
 				levelValue = int64(val.Float())
 			case reflect.Complex64, reflect.Complex128:

@@ -104,7 +104,7 @@ func (f *FileReader) Subscribe(ctx context.Context) (<-chan *reader.ReadEvent, e
 
 	// Watch the file
 	if err := watcher.Add(f.filePath); err != nil {
-		watcher.Close()
+		_ = watcher.Close()
 		return nil, fmt.Errorf("failed to watch file %s: %w", f.filePath, err)
 	}
 
@@ -158,10 +158,19 @@ func (f *FileReader) watchFile(ctx context.Context, eventChan chan<- *reader.Rea
 	defer close(eventChan)
 
 	for {
+		f.mu.RLock()
+		if f.closed || f.watcher == nil {
+			f.mu.RUnlock()
+			return
+		}
+
+		watcher := f.watcher
+		f.mu.RUnlock()
+
 		select {
 		case <-ctx.Done():
 			return
-		case event, ok := <-f.watcher.Events:
+		case event, ok := <-watcher.Events:
 			if !ok {
 				return
 			}
@@ -182,7 +191,7 @@ func (f *FileReader) watchFile(ctx context.Context, eventChan chan<- *reader.Rea
 					return
 				}
 			}
-		case err, ok := <-f.watcher.Errors:
+		case err, ok := <-watcher.Errors:
 			if !ok {
 				return
 			}

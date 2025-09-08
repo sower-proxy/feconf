@@ -373,9 +373,24 @@ func parseQueryConfig(u *url.URL, config *WSConfig) error {
 	// Parse TLS configuration
 	if insecureStr := query.Get("tls_insecure"); insecureStr == "true" {
 		if config.TLSConfig == nil {
-			config.TLSConfig = &tls.Config{}
+			config.TLSConfig = &tls.Config{
+				MinVersion: tls.VersionTLS12,
+			}
+		} else {
+			// Ensure minimum TLS version is set
+			if config.TLSConfig.MinVersion == 0 {
+				config.TLSConfig.MinVersion = tls.VersionTLS12
+			}
 		}
 		config.TLSConfig.InsecureSkipVerify = true
+	} else if u.Scheme == string(SchemeWSS) && config.TLSConfig == nil {
+		// For secure WebSocket connections, ensure minimum TLS version
+		config.TLSConfig = &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		}
+	} else if config.TLSConfig != nil && config.TLSConfig.MinVersion == 0 {
+		// If TLS config exists but no minimum version is set, use TLS 1.2
+		config.TLSConfig.MinVersion = tls.VersionTLS12
 	}
 
 	return nil

@@ -106,9 +106,19 @@ var upgrader = websocket.Upgrader{
 func startWSServer() {
 	// Start HTTP WebSocket server (for Load)
 	go func() {
-		http.HandleFunc("/config.xml", handleWebSocket)
+		mux := http.NewServeMux()
+		mux.HandleFunc("/config.xml", handleWebSocket)
+
+		server := &http.Server{
+			Addr:              ":8080",
+			Handler:           mux,
+			ReadHeaderTimeout: 5 * time.Second,
+			ReadTimeout:       10 * time.Second,
+			WriteTimeout:      10 * time.Second,
+		}
+
 		log.Printf("HTTP WebSocket server listening on :8080")
-		if err := http.ListenAndServe(":8080", nil); err != nil {
+		if err := server.ListenAndServe(); err != nil {
 			log.Printf("HTTP server error: %v", err)
 		}
 	}()
@@ -119,8 +129,11 @@ func startWSServer() {
 		mux.HandleFunc("/config.xml", handleSecureWebSocket)
 
 		server := &http.Server{
-			Addr:    ":8443",
-			Handler: mux,
+			Addr:              ":8443",
+			Handler:           mux,
+			ReadHeaderTimeout: 5 * time.Second,
+			ReadTimeout:       10 * time.Second,
+			WriteTimeout:      10 * time.Second,
 		}
 
 		log.Printf("HTTPS WebSocket server listening on :8443")
@@ -255,7 +268,7 @@ func generateTLSCert() error {
 	}
 	defer certOut.Close()
 
-	pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: certDER})
+	_ = pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: certDER})
 
 	// Save private key
 	keyOut, err := os.Create("server.key")
@@ -264,7 +277,7 @@ func generateTLSCert() error {
 	}
 	defer keyOut.Close()
 
-	pem.Encode(keyOut, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)})
+	_ = pem.Encode(keyOut, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)})
 
 	return nil
 }

@@ -14,15 +14,24 @@ var configData []byte
 // runServer 运行简化的配置服务器
 func runServer() {
 	// 设置路由
-	http.HandleFunc("/config.yaml", handleConfig)
-	http.HandleFunc("/config-auth.yaml", handleConfigAuth)
-	http.HandleFunc("/", handleIndex)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/config.yaml", handleConfig)
+	mux.HandleFunc("/config-auth.yaml", handleConfigAuth)
+	mux.HandleFunc("/", handleIndex)
 
 	// 启动模拟配置更新协程
 	go simulateConfigUpdates()
 
+	server := &http.Server{
+		Addr:              ":8080",
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+	}
+
 	fmt.Println("配置服务器运行在 http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(server.ListenAndServe())
 }
 
 func handleIndex(w http.ResponseWriter, r *http.Request) {
@@ -34,7 +43,7 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 
 func handleConfig(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/yaml")
-	w.Write(configData)
+	_, _ = w.Write(configData)
 }
 
 func handleConfigAuth(w http.ResponseWriter, r *http.Request) {
@@ -52,7 +61,7 @@ func handleConfigAuth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/yaml")
-	w.Write(configData)
+	_, _ = w.Write(configData)
 }
 
 func handleConfigAuthSSE(w http.ResponseWriter, r *http.Request) {
@@ -79,20 +88,20 @@ func handleConfigAuthSSE(w http.ResponseWriter, r *http.Request) {
 		case <-ticker.C:
 			// 模拟配置更新
 			updatedConfig := fmt.Sprintf(`application:
-  app_name: "示例应用"
-  version: "1.0.%d"
-  env: "development"
+	 app_name: "示例应用"
+	 version: "1.0.%d"
+	 env: "development"
 server:
-  bind_address: "localhost"
-  port: 8080
-  debug_mode: true
+	 bind_address: "localhost"
+	 port: 8080
+	 debug_mode: true
 database:
-  primary:
-    host: "localhost"
-    port: 5432
-    database_name: "myapp"
-    connection_url: "postgres://user:pass@localhost:5432/myapp"
-  read_replicas: []
+	 primary:
+	   host: "localhost"
+	   port: 5432
+	   database_name: "myapp"
+	   connection_url: "postgres://user:pass@localhost:5432/myapp"
+	 read_replicas: []
 feature_flags: ["auth", "logging", "metrics", "update-%d"]`, i, i)
 
 			fmt.Fprintf(w, "data: %s\n\n", updatedConfig)

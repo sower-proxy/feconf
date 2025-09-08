@@ -246,7 +246,7 @@ func (h *HTTPReader) subscribeSSE(ctx context.Context, eventChan chan<- *reader.
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			confEvent := reader.NewReadEvent(h.uri, nil, fmt.Errorf("SSE request failed with status: %d %s", resp.StatusCode, resp.Status))
 			select {
 			case eventChan <- confEvent:
@@ -265,7 +265,7 @@ func (h *HTTPReader) subscribeSSE(ctx context.Context, eventChan chan<- *reader.
 
 		// Process SSE stream
 		h.processSSEStream(ctx, resp, eventChan)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 
 		// Wait before reconnection
 		select {
@@ -385,9 +385,24 @@ func parseQueryConfig(u *url.URL, config *HTTPConfig) error {
 	// Parse TLS configuration
 	if insecureStr := query.Get("tls_insecure"); insecureStr == "true" {
 		if config.TLSConfig == nil {
-			config.TLSConfig = &tls.Config{}
+			config.TLSConfig = &tls.Config{
+				MinVersion: tls.VersionTLS12,
+			}
+		} else {
+			// Ensure minimum TLS version is set
+			if config.TLSConfig.MinVersion == 0 {
+				config.TLSConfig.MinVersion = tls.VersionTLS12
+			}
 		}
 		config.TLSConfig.InsecureSkipVerify = true
+	} else if u.Scheme == string(SchemeHTTPS) && config.TLSConfig == nil {
+		// For HTTPS connections, ensure minimum TLS version
+		config.TLSConfig = &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		}
+	} else if config.TLSConfig != nil && config.TLSConfig.MinVersion == 0 {
+		// If TLS config exists but no minimum version is set, use TLS 1.2
+		config.TLSConfig.MinVersion = tls.VersionTLS12
 	}
 
 	return nil

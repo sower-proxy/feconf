@@ -96,7 +96,7 @@ func NewRedisReader(uri string) (*RedisReader, error) {
 
 	// Validate key is provided
 	if config.Key == "" {
-		return nil, fmt.Errorf("Redis key must be specified in path")
+		return nil, fmt.Errorf("redis key must be specified in path")
 	}
 
 	// Create Redis options
@@ -172,7 +172,7 @@ func (r *RedisReader) Close() error {
 	select {
 	case pubsub := <-r.subsChan:
 		if pubsub != nil {
-			pubsub.Close()
+			_ = pubsub.Close()
 		}
 	default:
 	}
@@ -506,7 +506,9 @@ func parseRedisURI(u *url.URL, config *RedisConfig) error {
 
 	// Configure TLS for rediss scheme
 	if u.Scheme == string(SchemeRediss) {
-		config.TLSConfig = &tls.Config{}
+		config.TLSConfig = &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		}
 
 		// Parse TLS insecure option
 		if insecureStr := query.Get("tls_insecure"); insecureStr == "true" {

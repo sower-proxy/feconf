@@ -50,10 +50,9 @@ func TestIsValidURI(t *testing.T) {
 
 func TestGetFlagDefaultValue(t *testing.T) {
 	type testStruct struct {
-		Name       string
-		Count      int
-		Flag       bool
-		unexported string
+		Name  string
+		Count int
+		Flag  bool
 	}
 
 	tests := []struct {
