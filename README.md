@@ -5,10 +5,8 @@
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
 [![Test Coverage](https://img.shields.io/badge/coverage-92%25-brightgreen.svg)](https://github.com/sower-proxy/conf/actions/workflows/test.yml)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/sower-proxy/conf/test.yml?branch=main)](https://github.com/sower-proxy/conf/actions/workflows/test.yml)
-[![Release](https://img.shields.io/github/v/release/sower-proxy/conf)](https://github.com/sower-proxy/conf/releases)
 [![Documentation](https://img.shields.io/badge/docs-godoc-blue.svg)](https://pkg.go.dev/github.com/sower-proxy/conf)
 [![Code Size](https://img.shields.io/github/languages/code-size/sower-proxy/conf)](https://github.com/sower-proxy/conf)
-[![Last Commit](https://img.shields.io/github/last-commit/sower-proxy/conf)](https://github.com/sower-proxy/conf/commits/main)
 
 A flexible, URI-based configuration management library for Go that supports multiple protocols, formats, and real-time configuration updates.
 
