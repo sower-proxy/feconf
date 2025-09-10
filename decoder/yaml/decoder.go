@@ -3,7 +3,7 @@ package yaml
 import (
 	"fmt"
 
-	"github.com/sower-proxy/conf/decoder"
+	"github.com/sower-proxy/feconf/decoder"
 	"gopkg.in/yaml.v3"
 )
 

@@ -5,9 +5,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/sower-proxy/conf"
-	_ "github.com/sower-proxy/conf/decoder/ini"  // Import to register INI decoder
-	_ "github.com/sower-proxy/conf/reader/redis" // Import to register Redis reader
+	"github.com/sower-proxy/feconf"
+	_ "github.com/sower-proxy/feconf/decoder/ini"  // Import to register INI decoder
+	_ "github.com/sower-proxy/feconf/reader/redis" // Import to register Redis reader
 )
 
 // Helper function to format timestamp string

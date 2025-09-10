@@ -5,10 +5,10 @@ import (
 	"log"
 	"os"
 
-	"github.com/sower-proxy/conf"
-	_ "github.com/sower-proxy/conf/decoder/json"
-	_ "github.com/sower-proxy/conf/reader/file"
-	_ "github.com/sower-proxy/conf/reader/redis"
+	"github.com/sower-proxy/feconf"
+	_ "github.com/sower-proxy/feconf/decoder/json"
+	_ "github.com/sower-proxy/feconf/reader/file"
+	_ "github.com/sower-proxy/feconf/reader/redis"
 )
 
 // Config 结构体展示了如何使用标签来定义命令行标志

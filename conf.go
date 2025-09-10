@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/go-viper/mapstructure/v2"
-	"github.com/sower-proxy/conf/decoder"
-	"github.com/sower-proxy/conf/reader"
+	"github.com/sower-proxy/feconf/decoder"
+	"github.com/sower-proxy/feconf/reader"
 )
 
 type ConfOpt[T any] struct {

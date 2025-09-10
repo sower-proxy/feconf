@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/sower-proxy/conf/decoder"
+	"github.com/sower-proxy/feconf/decoder"
 )
 
 const (

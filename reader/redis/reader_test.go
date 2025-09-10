@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
-	"github.com/sower-proxy/conf/reader"
+	"github.com/sower-proxy/feconf/reader"
 )
 
 func TestNewRedisReader(t *testing.T) {

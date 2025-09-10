@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sower-proxy/conf/reader"
+	"github.com/sower-proxy/feconf/reader"
 )
 
 const (

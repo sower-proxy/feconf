@@ -2,9 +2,9 @@ module flags-example
 
 go 1.25.0
 
-replace github.com/sower-proxy/conf => ../..
+replace github.com/sower-proxy/feconf => ../..
 
-require github.com/sower-proxy/conf v0.0.0-00010101000000-000000000000
+require github.com/sower-proxy/feconf v0.0.0-00010101000000-000000000000
 
 require (
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect

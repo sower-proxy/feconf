@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/sower-proxy/conf/reader"
+	"github.com/sower-proxy/feconf/reader"
 )
 
 // Test function for URI parsing without creating actual Kubernetes client

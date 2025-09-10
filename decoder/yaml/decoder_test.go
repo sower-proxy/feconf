@@ -3,7 +3,7 @@ package yaml
 import (
 	"testing"
 
-	"github.com/sower-proxy/conf/decoder"
+	"github.com/sower-proxy/feconf/decoder"
 )
 
 func TestYAMLDecoder_Decode(t *testing.T) {

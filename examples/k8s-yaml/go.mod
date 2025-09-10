@@ -2,7 +2,7 @@ module k8s-yaml
 
 go 1.24.0
 
-require github.com/sower-proxy/conf v0.0.0
+require github.com/sower-proxy/feconf v0.0.0
 
 require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
@@ -51,4 +51,4 @@ require (
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
 
-replace github.com/sower-proxy/conf => ../..
+replace github.com/sower-proxy/feconf => ../..

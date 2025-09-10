@@ -15,9 +15,9 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/sower-proxy/conf"
-	_ "github.com/sower-proxy/conf/decoder/xml"
-	_ "github.com/sower-proxy/conf/reader/ws"
+	"github.com/sower-proxy/feconf"
+	_ "github.com/sower-proxy/feconf/decoder/xml"
+	_ "github.com/sower-proxy/feconf/reader/ws"
 )
 
 type Config struct {

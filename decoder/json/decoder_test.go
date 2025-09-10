@@ -3,7 +3,7 @@ package json
 import (
 	"testing"
 
-	"github.com/sower-proxy/conf/decoder"
+	"github.com/sower-proxy/feconf/decoder"
 )
 
 func TestJSONDecoder_Decode(t *testing.T) {

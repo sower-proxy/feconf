@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sower-proxy/conf/reader"
+	"github.com/sower-proxy/feconf/reader"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"

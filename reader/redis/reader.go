@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
-	"github.com/sower-proxy/conf/reader"
+	"github.com/sower-proxy/feconf/reader"
 )
 
 const (

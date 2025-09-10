@@ -6,9 +6,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/sower-proxy/conf"
-	_ "github.com/sower-proxy/conf/decoder/yaml"
-	_ "github.com/sower-proxy/conf/reader/k8s"
+	"github.com/sower-proxy/feconf"
+	_ "github.com/sower-proxy/feconf/decoder/yaml"
+	_ "github.com/sower-proxy/feconf/reader/k8s"
 )
 
 type Config struct {

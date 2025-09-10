@@ -3,7 +3,7 @@ package ini
 import (
 	"testing"
 
-	"github.com/sower-proxy/conf/decoder"
+	"github.com/sower-proxy/feconf/decoder"
 )
 
 func TestINIDecoder_Decode(t *testing.T) {

@@ -3,7 +3,7 @@ package toml
 import (
 	"testing"
 
-	"github.com/sower-proxy/conf/decoder"
+	"github.com/sower-proxy/feconf/decoder"
 )
 
 func TestTOMLDecoder_Decode(t *testing.T) {

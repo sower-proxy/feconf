@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sower-proxy/conf"
-	_ "github.com/sower-proxy/conf/decoder/yaml"
-	_ "github.com/sower-proxy/conf/reader/http"
+	"github.com/sower-proxy/feconf"
+	_ "github.com/sower-proxy/feconf/decoder/yaml"
+	_ "github.com/sower-proxy/feconf/reader/http"
 )
 
 func main() {

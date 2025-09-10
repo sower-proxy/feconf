@@ -1,12 +1,12 @@
-# conf
+# feconf
 
 [![Go Version](https://img.shields.io/badge/go-%3E%3D1.24-blue.svg)](https://golang.org/)
-[![Go Report Card](https://goreportcard.com/badge/github.com/sower-proxy/conf)](https://goreportcard.com/report/github.com/sower-proxy/conf)
+[![Go Report Card](https://goreportcard.com/badge/github.com/sower-proxy/feconf)](https://goreportcard.com/report/github.com/sower-proxy/feconf)
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
-[![Test Coverage](https://img.shields.io/badge/coverage-92%25-brightgreen.svg)](https://github.com/sower-proxy/conf/actions/workflows/test.yml)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/sower-proxy/conf/test.yml?branch=main)](https://github.com/sower-proxy/conf/actions/workflows/test.yml)
-[![Documentation](https://img.shields.io/badge/docs-godoc-blue.svg)](https://pkg.go.dev/github.com/sower-proxy/conf)
-[![Code Size](https://img.shields.io/github/languages/code-size/sower-proxy/conf)](https://github.com/sower-proxy/conf)
+[![Test Coverage](https://img.shields.io/badge/coverage-92%25-brightgreen.svg)](https://github.com/sower-proxy/feconf/actions/workflows/test.yml)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/sower-proxy/feconf/test.yml?branch=main)](https://github.com/sower-proxy/feconf/actions/workflows/test.yml)
+[![Documentation](https://img.shields.io/badge/docs-godoc-blue.svg)](https://pkg.go.dev/github.com/sower-proxy/feconf)
+[![Code Size](https://img.shields.io/github/languages/code-size/sower-proxy/feconf)](https://github.com/sower-proxy/feconf)
 
 A flexible, URI-based configuration management library for Go that supports multiple protocols, formats, and real-time configuration updates.
 
@@ -25,7 +25,7 @@ A flexible, URI-based configuration management library for Go that supports mult
 ## Installation
 
 ```bash
-go get github.com/sower-proxy/conf
+go get github.com/sower-proxy/feconf
 ```
 
 ## Quick Start
@@ -37,9 +37,9 @@ import (
     "fmt"
     "log"
 
-    "github.com/sower-proxy/conf"
-    _ "github.com/sower-proxy/conf/decoder/json"
-    _ "github.com/sower-proxy/conf/reader/file"
+    "github.com/sower-proxy/feconf"
+    _ "github.com/sower-proxy/feconf/decoder/json"
+    _ "github.com/sower-proxy/feconf/reader/file"
 )
 
 type Config struct {

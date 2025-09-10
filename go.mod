@@ -1,4 +1,4 @@
-module github.com/sower-proxy/conf
+module github.com/sower-proxy/feconf
 
 go 1.24.0
 

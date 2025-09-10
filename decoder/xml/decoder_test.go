@@ -4,7 +4,7 @@ import (
 	stdxml "encoding/xml"
 	"testing"
 
-	"github.com/sower-proxy/conf/decoder"
+	"github.com/sower-proxy/feconf/decoder"
 )
 
 func TestXMLDecoder_Decode(t *testing.T) {

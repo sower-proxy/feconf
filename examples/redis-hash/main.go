@@ -5,9 +5,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/sower-proxy/conf"
-	_ "github.com/sower-proxy/conf/decoder/json"
-	_ "github.com/sower-proxy/conf/reader/redis"
+	"github.com/sower-proxy/feconf"
+	_ "github.com/sower-proxy/feconf/decoder/json"
+	_ "github.com/sower-proxy/feconf/reader/redis"
 )
 
 type DatabaseConfig struct {
