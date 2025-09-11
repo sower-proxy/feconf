@@ -26,7 +26,7 @@ func main() {
 	uri := "redis://localhost:6379/app-config?content-type=application/json#database"
 
 	// Create configuration loader
-	loader := conf.New[DatabaseConfig](uri)
+	loader := feconf.New[DatabaseConfig](uri)
 	defer loader.Close()
 
 	fmt.Printf("📍 Reading from: %s\n", uri)

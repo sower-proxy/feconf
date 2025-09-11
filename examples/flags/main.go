@@ -51,7 +51,7 @@ func main() {
 
 	// 首先加载标志以显示帮助信息
 	var flagValues Config
-	err := conf.LoadFlags(&flagValues)
+	err := feconf.LoadFlags(&flagValues)
 	if err != nil {
 		log.Printf("❌ Failed to parse flags: %v", err)
 		os.Exit(1)
@@ -63,7 +63,7 @@ func main() {
 	// 方法1：使用 LoadWithFlags 直接加载配置（推荐）
 	// 这是更简洁的方式，一次性完成标志解析和配置加载
 	var config Config
-	err = conf.LoadWithFlags(&config, "ConfigURI")
+	err = feconf.LoadWithFlags(&config, "ConfigURI")
 	if err != nil {
 		log.Printf("❌ Failed to load configuration: %v", err)
 		log.Println("💡 Make sure the configuration source is accessible and contains valid JSON")
@@ -72,7 +72,7 @@ func main() {
 
 	// 方法2：使用 ConfOpt 的 Load 方法（灵活方式）
 	// 适合需要更多控制或复用配置选项的场景
-	loader := conf.NewWithFlags[Config]("ConfigURI")
+	loader := feconf.NewWithFlags[Config]("ConfigURI")
 	defer loader.Close()
 
 	var config2 Config

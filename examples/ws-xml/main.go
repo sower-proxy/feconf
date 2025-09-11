@@ -46,7 +46,7 @@ func main() {
 
 	// Load configuration via regular ws
 	configURI := "ws://localhost:8080/config.xml"
-	loader := conf.New[Config](configURI)
+	loader := feconf.New[Config](configURI)
 	defer loader.Close()
 
 	fmt.Println("🔄 加载配置...")
@@ -62,7 +62,7 @@ func main() {
 
 	// Subscribe via secure wss
 	secureURI := "wss://localhost:8443/config.xml?tls_insecure=true"
-	secureLoader := conf.New[Config](secureURI)
+	secureLoader := feconf.New[Config](secureURI)
 	defer secureLoader.Close()
 
 	fmt.Println("📡 订阅配置更新 (WSS)...")

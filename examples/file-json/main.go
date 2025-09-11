@@ -29,7 +29,7 @@ type DatabaseConfig struct {
 
 func main() {
 	// Load configuration from file (use absolute path with extension)
-	loader := conf.New[Config]("file://./config.json")
+	loader := feconf.New[Config]("file://./config.json")
 	var config Config
 	err := loader.Load(&config)
 	if err != nil {

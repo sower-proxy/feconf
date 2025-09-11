@@ -33,7 +33,7 @@ func main() {
 // 基础配置加载示例
 func runBasicExample() {
 	configURI := "http://localhost:8080/config.yaml"
-	loader := conf.New[Config](configURI)
+	loader := feconf.New[Config](configURI)
 	defer loader.Close()
 
 	var config Config
@@ -58,7 +58,7 @@ func runBasicExample() {
 // 认证配置订阅示例
 func runAuthExample() {
 	configURI := "http://user:pass@localhost:8080/config-auth.yaml"
-	loader := conf.New[Config](configURI)
+	loader := feconf.New[Config](configURI)
 	defer loader.Close()
 
 	fmt.Println("🔐 启动认证配置订阅...")

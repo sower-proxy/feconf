@@ -43,7 +43,7 @@ func main() {
 	fmt.Println("Starting Redis INI configuration example...")
 
 	// Load config from Redis with INI format
-	c := conf.New[Config]("redis://localhost:6379/config?db=0&content-type=text/ini")
+	c := feconf.New[Config]("redis://localhost:6379/config?db=0&content-type=text/ini")
 
 	// Load initial config
 	var cfg Config

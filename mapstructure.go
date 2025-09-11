@@ -1,4 +1,4 @@
-package conf
+package feconf
 
 import (
 	"fmt"
@@ -219,7 +219,7 @@ func isZeroValue(data any) bool {
 		return val.Float() == 0
 	case reflect.Bool:
 		return !val.Bool()
-	case reflect.Ptr, reflect.Slice, reflect.Map, reflect.Interface:
+	case reflect.Pointer, reflect.Slice, reflect.Map, reflect.Interface:
 		return val.IsNil()
 	case reflect.Struct:
 		// 对于结构体，检查所有字段是否为零值
@@ -242,7 +242,7 @@ func getDefaultValue(t reflect.Type) any {
 		return float64(0)
 	case reflect.Bool:
 		return false
-	case reflect.Ptr, reflect.Slice, reflect.Map, reflect.Interface:
+	case reflect.Pointer, reflect.Slice, reflect.Map, reflect.Interface:
 		return nil
 	case reflect.Struct:
 		// 对于结构体，返回零值

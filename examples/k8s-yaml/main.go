@@ -42,7 +42,7 @@ func main() {
 	// Load configuration from Kubernetes ConfigMap using ~/.kube/config
 	// Format: k8s://[resource-type]/[namespace]/[name]/[key]
 	// Example: k8s://configmap/default/my-app-config/config.yaml
-	loader := conf.New[Config]("k8s://configmap/default/my-app-config/config.yaml")
+	loader := feconf.New[Config]("k8s://configmap/default/my-app-config/config.yaml")
 	var config Config
 	err := loader.Load(&config)
 	if err != nil {
