@@ -42,9 +42,10 @@ func main() {
 	// Load configuration from Kubernetes ConfigMap using ~/.kube/config
 	// Format: k8s://[resource-type]/[namespace]/[name]/[key]
 	// Example: k8s://configmap/default/my-app-config/config.yaml
-	loader := feconf.New[Config]("k8s://configmap/default/my-app-config/config.yaml")
-	var config Config
-	err := loader.Load(&config)
+	loader := feconf.New[Config]("", "k8s://configmap/default/my-app-config/config.yaml")
+	defer loader.Close()
+
+	config, err := loader.Parse()
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
@@ -74,7 +75,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to subscribe to config changes: %v", err)
 	}
-	defer loader.Close()
 
 	// Create a context with timeout for demonstration
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)

@@ -29,9 +29,13 @@ type DatabaseConfig struct {
 
 func main() {
 	// Load configuration from file (use absolute path with extension)
-	loader := feconf.New[Config]("file://./config.json")
-	var config Config
-	err := loader.Load(&config)
+	// New signature: New[T](flag string, uris ...string)
+	// - flag: name of the flag to override URI (empty string means no flag)
+	// - uris: default URIs to use
+	loader := feconf.New[Config]("", "file://./config.json")
+	defer loader.Close()
+
+	config, err := loader.Parse()
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
@@ -49,7 +53,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to subscribe to config changes: %v", err)
 	}
-	defer loader.Close()
 
 	// Create a context with timeout for demonstration
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)

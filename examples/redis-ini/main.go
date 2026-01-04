@@ -43,11 +43,11 @@ func main() {
 	fmt.Println("Starting Redis INI configuration example...")
 
 	// Load config from Redis with INI format
-	c := feconf.New[Config]("redis://localhost:6379/config?db=0&content-type=text/ini")
+	loader := feconf.New[Config]("", "redis://localhost:6379/config?db=0&content-type=text/ini")
+	defer loader.Close()
 
 	// Load initial config
-	var cfg Config
-	err := c.Load(&cfg)
+	cfg, err := loader.Parse()
 	if err != nil {
 		log.Printf("Failed to load config: %v", err)
 		log.Println("Make sure Redis is running on localhost:6379 and key 'config' contains valid INI data")
@@ -61,9 +61,9 @@ func main() {
 	fmt.Printf("  Logging: level=%s, file=%s\n", cfg.Logging.Level, cfg.Logging.File)
 	fmt.Println()
 
-	fmt.Println("🔄 Starting configuration monitoring (polling mode)")
-	fmt.Println("📝 Checking for updates every 2 seconds...")
-	fmt.Println("🧪 To test: run './setup.sh' in another terminal")
+	fmt.Println("Starting configuration monitoring (polling mode)")
+	fmt.Println("Checking for updates every 2 seconds...")
+	fmt.Println("To test: run './setup.sh' in another terminal")
 	fmt.Println()
 
 	// Use polling approach (reliable)
@@ -77,27 +77,30 @@ func main() {
 	for {
 		select {
 		case <-timeout:
-			fmt.Println("✅ Example finished.")
+			fmt.Println("Example finished.")
 			return
 
 		case <-ticker.C:
-			var newCfg Config
-			err := c.Load(&newCfg)
+			// Create a new loader for each poll to get fresh data
+			pollLoader := feconf.New[Config]("", "redis://localhost:6379/config?db=0&content-type=text/ini")
+			newCfg, err := pollLoader.Parse()
+			pollLoader.Close()
+
 			if err != nil {
-				log.Printf("❌ Failed to reload config: %v", err)
+				log.Printf("Failed to reload config: %v", err)
 				continue
 			}
 
 			// Check if config has changed (by timestamp)
 			if newCfg.Timestamp != lastTimestamp {
 				eventCount++
-				fmt.Printf("🔥 === Config Update #%d Detected ===\n", eventCount)
-				fmt.Printf("⏰ Old timestamp: %s\n", formatTimestamp(lastTimestamp))
-				fmt.Printf("🆕 New timestamp: %s\n", formatTimestamp(newCfg.Timestamp))
-				fmt.Printf("🏢 Server: %s:%d (debug: %t)\n", newCfg.Server.Host, newCfg.Server.Port, newCfg.Server.Debug)
-				fmt.Printf("🗄️  Database: %s:%d (%s)\n", newCfg.Database.Host, newCfg.Database.Port, newCfg.Database.Name)
-				fmt.Printf("📋 Logging: %s -> %s\n", newCfg.Logging.Level, newCfg.Logging.File)
-				fmt.Println("✅ Configuration update applied successfully!")
+				fmt.Printf("=== Config Update #%d Detected ===\n", eventCount)
+				fmt.Printf("Old timestamp: %s\n", formatTimestamp(lastTimestamp))
+				fmt.Printf("New timestamp: %s\n", formatTimestamp(newCfg.Timestamp))
+				fmt.Printf("Server: %s:%d (debug: %t)\n", newCfg.Server.Host, newCfg.Server.Port, newCfg.Server.Debug)
+				fmt.Printf("Database: %s:%d (%s)\n", newCfg.Database.Host, newCfg.Database.Port, newCfg.Database.Name)
+				fmt.Printf("Logging: %s -> %s\n", newCfg.Logging.Level, newCfg.Logging.File)
+				fmt.Println("Configuration update applied successfully!")
 				fmt.Println()
 
 				lastTimestamp = newCfg.Timestamp
