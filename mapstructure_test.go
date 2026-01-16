@@ -945,6 +945,74 @@ func TestDefaultHookIntegration(t *testing.T) {
 	}
 }
 
+func TestRenderEnv(t *testing.T) {
+	// 设置测试用的环境变量
+	t.Setenv("TEST_VAR", "hello")
+	t.Setenv("TEST_HOME", "/home/user")
+	t.Setenv("TEST_PORT", "8080")
+
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "shell style simple",
+			input:    "${TEST_VAR}",
+			expected: "hello",
+		},
+		{
+			name:     "shell style with default",
+			input:    "${NOT_EXIST:-default_value}",
+			expected: "default_value",
+		},
+		{
+			name:     "shell style existing with default",
+			input:    "${TEST_VAR:-default_value}",
+			expected: "hello",
+		},
+		{
+			name:     "shell style in text",
+			input:    "prefix_${TEST_VAR}_suffix",
+			expected: "prefix_hello_suffix",
+		},
+		{
+			name:     "shell style multiple vars",
+			input:    "${TEST_HOME}:${TEST_PORT}",
+			expected: "/home/user:8080",
+		},
+		{
+			name:     "shell style escaped",
+			input:    "$${TEST_VAR}",
+			expected: "${TEST_VAR}",
+		},
+		{
+			name:     "shell style not exist",
+			input:    "${NOT_EXIST}",
+			expected: "",
+		},
+		{
+			name:     "no vars",
+			input:    "plain text",
+			expected: "plain text",
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := renderEnv(tt.input)
+			if result != tt.expected {
+				t.Errorf("renderEnv(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
 func TestDefaultHookWithStruct(t *testing.T) {
 	type Address struct {
 		Street string `json:"street"`
