@@ -15,12 +15,16 @@ import (
 
 const (
 	// SchemeFile represents file URI scheme
-	SchemeFile reader.Scheme = "file"
+	SchemeFile    reader.Scheme = "file"
+	SchemeDefault reader.Scheme = ""
 )
 
 // init registers file reader
 func init() {
 	_ = reader.RegisterReader(SchemeFile, func(uri string) (reader.ConfReader, error) {
+		return NewFileReader(uri)
+	})
+	_ = reader.RegisterReader(SchemeDefault, func(uri string) (reader.ConfReader, error) {
 		return NewFileReader(uri)
 	})
 }

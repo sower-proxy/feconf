@@ -15,14 +15,15 @@ var schemeReaderMap sync.Map
 
 // RegisterReader registers a reader for given scheme
 func RegisterReader(scheme Scheme, newReader func(uri string) (ConfReader, error)) error {
-	if scheme == "" {
-		return fmt.Errorf("empty scheme")
-	}
 	if newReader == nil {
 		return fmt.Errorf("nil reader")
 	}
 
-	schemeReaderMap.Store(scheme, newReader)
+	_, loaded := schemeReaderMap.LoadOrStore(scheme, newReader)
+	if loaded {
+		return fmt.Errorf("scheme \"%s\" already registered", scheme)
+	}
+
 	return nil
 }
 
