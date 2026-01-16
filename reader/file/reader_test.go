@@ -46,6 +46,65 @@ func TestNewFileReader(t *testing.T) {
 	}
 }
 
+func TestSchemeDefault(t *testing.T) {
+	// Create temp file
+	tmpFile, err := os.CreateTemp("", "test_config_*.json")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	defer os.Remove(tmpFile.Name())
+
+	testData := `{"key": "value", "number": 123}`
+	if _, err := tmpFile.WriteString(testData); err != nil {
+		t.Fatalf("Failed to write test data: %v", err)
+	}
+	tmpFile.Close()
+
+	tests := []struct {
+		name    string
+		uri     string
+		wantErr bool
+	}{
+		{
+			name:    "absolute path without scheme",
+			uri:     tmpFile.Name(),
+			wantErr: false,
+		},
+		{
+			name:    "file URI with scheme",
+			uri:     "file://" + tmpFile.Name(),
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fileReader, err := NewFileReader(tt.uri)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("NewFileReader() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if err != nil {
+				return
+			}
+			defer fileReader.Close()
+
+			// Test reading data
+			ctx := context.Background()
+			data, err := fileReader.Read(ctx)
+			if err != nil {
+				t.Errorf("Failed to read: %v", err)
+				return
+			}
+
+			if string(data) != testData {
+				t.Errorf("Expected data %s, got %s", testData, string(data))
+			}
+		})
+	}
+}
+
 func TestFileReader_Read(t *testing.T) {
 	// Create temp file
 	tmpFile, err := os.CreateTemp("", "test_config_*.json")

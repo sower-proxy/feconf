@@ -63,10 +63,6 @@ func ParseURI(uri string) (*url.URL, error) {
 		return nil, fmt.Errorf("invalid URI format: %w", err)
 	}
 
-	if u.Scheme == "" {
-		return nil, fmt.Errorf("missing scheme in URI: %s", uri)
-	}
-
 	if _, exists := schemeReaderMap.Load(Scheme(u.Scheme)); !exists {
 		return nil, fmt.Errorf("unsupported URI scheme: %s", u.Scheme)
 	}

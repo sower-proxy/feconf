@@ -45,8 +45,8 @@ func NewFileReader(uri string) (*FileReader, error) {
 		return nil, err
 	}
 
-	if u.Scheme != string(SchemeFile) {
-		return nil, fmt.Errorf("unsupported scheme: %s, expected: %s", u.Scheme, SchemeFile)
+	if u.Scheme != string(SchemeFile) && u.Scheme != string(SchemeDefault) {
+		return nil, fmt.Errorf("unsupported scheme: %s, expected: %s or empty", u.Scheme, SchemeFile)
 	}
 
 	filePath := u.Path
