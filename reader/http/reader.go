@@ -129,6 +129,10 @@ func (h *HTTPReader) Subscribe(ctx context.Context) (<-chan *reader.ReadEvent, e
 
 // Close closes the reader and cleans up resources
 func (h *HTTPReader) Close() error {
+	if h == nil {
+		return nil
+	}
+
 	h.mu.Lock()
 	defer h.mu.Unlock()
 

@@ -118,6 +118,10 @@ func (f *FileReader) Subscribe(ctx context.Context) (<-chan *reader.ReadEvent, e
 
 // Close closes the reader and cleans up resources
 func (f *FileReader) Close() error {
+	if f == nil {
+		return nil
+	}
+
 	f.mu.Lock()
 	defer f.mu.Unlock()
 

@@ -33,10 +33,6 @@ func New[T any](flag string, uris ...string) *ConfOpt[T] {
 			uri = u
 			break
 		}
-		if r != nil {
-			r.Close()
-			r = nil
-		}
 	}
 
 	conf := &ConfOpt[T]{

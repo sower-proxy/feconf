@@ -159,6 +159,10 @@ func (r *RedisReader) Subscribe(ctx context.Context) (<-chan *reader.ReadEvent, 
 
 // Close closes the reader and cleans up resources
 func (r *RedisReader) Close() error {
+	if r == nil {
+		return nil
+	}
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

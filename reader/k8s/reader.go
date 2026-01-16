@@ -211,6 +211,10 @@ func (k *K8SReader) Subscribe(ctx context.Context) (<-chan *reader.ReadEvent, er
 
 // Close closes the reader and cleans up resources
 func (k *K8SReader) Close() error {
+	if k == nil {
+		return nil
+	}
+
 	k.mu.Lock()
 	defer k.mu.Unlock()
 
