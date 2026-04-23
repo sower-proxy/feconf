@@ -114,6 +114,9 @@ The library follows a modular plugin-based architecture:
                        └──────────────────┘
 ```
 
+See [ARCHITECTURE.md](ARCHITECTURE.md) for system boundaries, layer ownership,
+data flow, and design decisions.
+
 ## Examples
 
 See the `examples/` directory for complete working examples:
@@ -145,9 +148,15 @@ loader.ParserConf.ErrorUnused = true
 loader.ParserConf.DecodeHook = mapstructure.ComposeDecodeHookFunc(
     feconf.HookFuncDefault(),
     feconf.HookFuncEnvRender(),
+    feconf.HookFuncStringToSlice(),
     feconf.HookFuncStringToBool(),
 )
 ```
+
+`HookFuncStringToSlice()` allows env-rendered string values to be decoded into
+slice fields from either JSON/YAML flow sequences such as
+`["a","b"]` / `[a, b]`. Existing comma-separated string decoding remains
+available through the fallback CSV hook in `DefaultParserConfig`.
 
 ## URI Parameters
 

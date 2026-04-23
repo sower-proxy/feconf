@@ -2,6 +2,7 @@ package feconf
 
 import (
 	"log/slog"
+	"os"
 	"reflect"
 	"testing"
 
@@ -515,6 +516,172 @@ func TestStringToSlogLevelHookIntegration(t *testing.T) {
 			}
 			if config != tt.expected {
 				t.Errorf("Decode() = %v, want %v", config, tt.expected)
+			}
+		})
+	}
+}
+
+func TestStringToSliceHook(t *testing.T) {
+	hook := HookFuncStringToSlice()
+
+	tests := []struct {
+		name     string
+		fromType reflect.Type
+		toType   reflect.Type
+		data     any
+		want     any
+		wantErr  bool
+	}{
+		{
+			name:     "json array literal to string slice",
+			fromType: reflect.TypeOf(""),
+			toType:   reflect.TypeOf([]string{}),
+			data:     `["127.0.0.1:26380","127.0.0.2:26380"]`,
+			want:     []string{"127.0.0.1:26380", "127.0.0.2:26380"},
+			wantErr:  false,
+		},
+		{
+			name:     "yaml flow sequence to string slice",
+			fromType: reflect.TypeOf(""),
+			toType:   reflect.TypeOf([]string{}),
+			data:     `[127.0.0.1:26380, 127.0.0.2:26380]`,
+			want:     []string{"127.0.0.1:26380", "127.0.0.2:26380"},
+			wantErr:  false,
+		},
+		{
+			name:     "csv keeps fallback behavior",
+			fromType: reflect.TypeOf(""),
+			toType:   reflect.TypeOf([]string{}),
+			data:     `127.0.0.1:26380,127.0.0.2:26380`,
+			want:     `127.0.0.1:26380,127.0.0.2:26380`,
+			wantErr:  false,
+		},
+		{
+			name:     "unterminated slice literal",
+			fromType: reflect.TypeOf(""),
+			toType:   reflect.TypeOf([]string{}),
+			data:     `["127.0.0.1:26380",`,
+			want:     nil,
+			wantErr:  true,
+		},
+		{
+			name:     "malformed closed slice literal",
+			fromType: reflect.TypeOf(""),
+			toType:   reflect.TypeOf([]string{}),
+			data:     `["127.0.0.1:26380", {]`,
+			want:     nil,
+			wantErr:  true,
+		},
+		{
+			name:     "non-slice target",
+			fromType: reflect.TypeOf(""),
+			toType:   reflect.TypeOf(""),
+			data:     `["127.0.0.1:26380"]`,
+			want:     `["127.0.0.1:26380"]`,
+			wantErr:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := hook(tt.fromType, tt.toType, tt.data)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("StringToSliceHook() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Fatalf("StringToSliceHook() = %#v, want %#v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestStringToSliceHookIntegration(t *testing.T) {
+	type Config struct {
+		SentinelAddrs []string `json:"sentinel_addrs"`
+	}
+
+	tests := []struct {
+		name     string
+		input    map[string]any
+		expected Config
+		wantErr  bool
+	}{
+		{
+			name: "csv string",
+			input: map[string]any{
+				"sentinel_addrs": "127.0.0.1:26380,127.0.0.2:26380",
+			},
+			expected: Config{
+				SentinelAddrs: []string{"127.0.0.1:26380", "127.0.0.2:26380"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "rendered json array string",
+			input: map[string]any{
+				"sentinel_addrs": `${REDIS_SENTINEL_ADDRS}`,
+			},
+			expected: Config{
+				SentinelAddrs: []string{"127.0.0.1:26380", "127.0.0.2:26380"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "rendered yaml flow sequence string",
+			input: map[string]any{
+				"sentinel_addrs": `${REDIS_SENTINEL_ADDRS}`,
+			},
+			expected: Config{
+				SentinelAddrs: []string{"127.0.0.1:26380", "127.0.0.2:26380"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid rendered slice literal",
+			input: map[string]any{
+				"sentinel_addrs": `${REDIS_SENTINEL_ADDRS}`,
+			},
+			expected: Config{},
+			wantErr:  true,
+		},
+	}
+
+	envValues := map[string]string{
+		"rendered json array string":         `["127.0.0.1:26380","127.0.0.2:26380"]`,
+		"rendered yaml flow sequence string": `[127.0.0.1:26380, 127.0.0.2:26380]`,
+		"invalid rendered slice literal":     `["127.0.0.1:26380", {]`,
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if envValue, ok := envValues[tt.name]; ok {
+				prevValue, hadPrev := os.LookupEnv("REDIS_SENTINEL_ADDRS")
+				if err := os.Setenv("REDIS_SENTINEL_ADDRS", envValue); err != nil {
+					t.Fatalf("Setenv() error = %v", err)
+				}
+				t.Cleanup(func() {
+					if hadPrev {
+						_ = os.Setenv("REDIS_SENTINEL_ADDRS", prevValue)
+						return
+					}
+					_ = os.Unsetenv("REDIS_SENTINEL_ADDRS")
+				})
+			}
+
+			var config Config
+			decoderConfig := DefaultParserConfig
+			decoderConfig.Result = &config
+			decoder, err := mapstructure.NewDecoder(&decoderConfig)
+			if err != nil {
+				t.Fatalf("Failed to create decoder: %v", err)
+			}
+
+			err = decoder.Decode(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("Decode() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr && !reflect.DeepEqual(config, tt.expected) {
+				t.Fatalf("Decode() = %#v, want %#v", config, tt.expected)
 			}
 		})
 	}

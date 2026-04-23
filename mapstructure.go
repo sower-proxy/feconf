@@ -1,6 +1,7 @@
 package feconf
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/go-viper/mapstructure/v2"
+	"gopkg.in/yaml.v3"
 )
 
 // DefaultParserConfig 默认解析器配置
@@ -16,6 +18,7 @@ var DefaultParserConfig = mapstructure.DecoderConfig{
 	DecodeHook: mapstructure.ComposeDecodeHookFunc(
 		HookFuncDefault(),
 		HookFuncEnvRender(),
+		HookFuncStringToSlice(),
 		HookFuncStringToBool(),
 		HookFuncStringToSlogLevel(),
 		mapstructure.StringToTimeDurationHookFunc(),
@@ -145,7 +148,48 @@ func HookFuncEnvRender() mapstructure.DecodeHookFuncType {
 	}
 }
 
+// HookFuncStringToSlice supports structured slice literals such as JSON/YAML
+// flow sequences while preserving the existing CSV fallback hook behavior.
+func HookFuncStringToSlice() mapstructure.DecodeHookFuncType {
+	return func(f reflect.Type, t reflect.Type, data any) (any, error) {
+		if f.Kind() != reflect.String || t.Kind() != reflect.Slice {
+			return data, nil
+		}
+
+		raw := strings.TrimSpace(data.(string))
+		if !looksLikeSliceLiteralCandidate(raw) {
+			return data, nil
+		}
+
+		parsed, err := parseSliceLiteral(raw, t)
+		if err != nil {
+			return nil, err
+		}
+		return parsed, nil
+	}
+}
+
 var envRe = regexp.MustCompile(`\$\{([a-zA-Z0-9_]+)(?::-([^}]*))?\}`)
+
+func looksLikeSliceLiteralCandidate(raw string) bool {
+	return strings.HasPrefix(raw, "[")
+}
+
+func parseSliceLiteral(raw string, targetType reflect.Type) (any, error) {
+	targetValue := reflect.New(targetType)
+	jsonErr := json.Unmarshal([]byte(raw), targetValue.Interface())
+	if jsonErr == nil {
+		return targetValue.Elem().Interface(), nil
+	}
+
+	targetValue = reflect.New(targetType)
+	yamlErr := yaml.Unmarshal([]byte(raw), targetValue.Interface())
+	if yamlErr == nil {
+		return targetValue.Elem().Interface(), nil
+	}
+
+	return nil, fmt.Errorf("parse %s from slice literal %q: json=%v; yaml=%v", targetType, raw, jsonErr, yamlErr)
+}
 
 // renderEnv 渲染环境变量
 func renderEnv(value string) string {
