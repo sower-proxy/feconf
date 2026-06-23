@@ -11,7 +11,7 @@ A flexible and comfortable, URI-based configuration management library for Go wi
 
 ## Features
 
-- **Multi-protocol**: File, HTTP, WebSocket, Redis, Kubernetes, Nacos
+- **Multi-protocol**: File, HTTP, WebSocket, Redis, Nacos, and optional Kubernetes
 - **Multi-format**: JSON, YAML, INI, TOML, XML
 - **Real-time updates**: Subscribe to configuration changes
 - **Type-safe**: Strong struct mapping with mapstructure
@@ -65,7 +65,9 @@ loader := feconf.New[Config]("redis://localhost:6379/config-key")
 // WebSocket
 loader := feconf.New[Config]("wss://realtime.example.com/config")
 
-// Kubernetes
+// Kubernetes, provided by optional module github.com/sower-proxy/feconf/reader/k8s
+// Import it for side effects before using k8s:// URIs:
+//   import _ "github.com/sower-proxy/feconf/reader/k8s"
 loader := feconf.New[Config]("k8s://configmap/default/app-config")
 
 // Nacos
@@ -169,7 +171,15 @@ Common parameters:
 - `timeout` - Request/operation timeout
 - `retry_attempts` - Number of retries
 
-Protocol-specific parameters available for HTTP, Redis, WebSocket, Kubernetes, and Nacos connections.
+Protocol-specific parameters available for HTTP, Redis, WebSocket, and Nacos connections.
+
+Kubernetes reader is distributed as an optional submodule so applications that
+do not import `github.com/sower-proxy/feconf/reader/k8s` do not pull the
+Kubernetes SDK dependency graph.
+
+```bash
+go get github.com/sower-proxy/feconf/reader/k8s
+```
 
 Nacos URI format:
 

@@ -32,7 +32,7 @@ Location: `reader/`
 Responsibilities:
 
 - parse reader URIs
-- fetch raw configuration bytes from file, HTTP, Redis, Kubernetes, Nacos, and other backends
+- fetch raw configuration bytes from file, HTTP, Redis, Nacos, optional Kubernetes, and other backends
 - expose subscription/update capabilities when the backend supports them
 
 ### Decoder Layer
@@ -100,6 +100,12 @@ Responsibilities:
 - decoder packages stay format-specific, while value normalization is centralized in the mapping layer
 - environment rendering is done before type coercion so downstream hooks see final strings
 - string-to-slice parsing accepts structured JSON/YAML literals before CSV fallback in order to support environment-driven list injection without breaking existing comma-separated inputs
+- Kubernetes reader lives in the optional `github.com/sower-proxy/feconf/reader/k8s`
+  submodule. The root module must not require Kubernetes SDK packages; callers
+  only pay that dependency cost when they explicitly import the k8s reader.
+- The Kubernetes submodule must be released with the same tag as the root module
+  when both change together. Its local `replace github.com/sower-proxy/feconf => ../..`
+  is only for repository-local development and is not visible to downstream users.
 
 ## Related Docs
 

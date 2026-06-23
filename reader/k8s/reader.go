@@ -51,17 +51,45 @@ type K8SReader struct {
 	closed       bool
 }
 
+type k8sTarget struct {
+	resourceType string
+	namespace    string
+	name         string
+	key          string
+}
+
 // NewK8SReader creates a new k8s reader
 // URI format: k8s://{resourceType}/{namespace}/{name}[/{key}]
 // Example: k8s://configmap/default/my-config/config.yaml
 func NewK8SReader(uri string) (*K8SReader, error) {
+	target, err := parseK8STarget(uri)
+	if err != nil {
+		return nil, err
+	}
+
+	clientset, err := createK8SClient()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create k8s client: %w", err)
+	}
+
+	return &K8SReader{
+		uri:          uri,
+		resourceType: target.resourceType,
+		namespace:    target.namespace,
+		name:         target.name,
+		key:          target.key,
+		clientset:    clientset,
+	}, nil
+}
+
+func parseK8STarget(uri string) (k8sTarget, error) {
 	u, err := reader.ParseURI(uri)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse URI: %w", err)
+		return k8sTarget{}, fmt.Errorf("failed to parse URI: %w", err)
 	}
 
 	if u.Scheme != string(SchemeK8S) {
-		return nil, fmt.Errorf("unsupported scheme: %s, expected: %s", u.Scheme, SchemeK8S)
+		return k8sTarget{}, fmt.Errorf("unsupported scheme: %s, expected: %s", u.Scheme, SchemeK8S)
 	}
 
 	// Parse URI: k8s://{resourceType}/{namespace}/{name}[/{key}]
@@ -74,7 +102,7 @@ func NewK8SReader(uri string) (*K8SReader, error) {
 
 	// Validate resource type
 	if resourceType != ResourceTypeConfigMap && resourceType != ResourceTypeSecret {
-		return nil, fmt.Errorf("unsupported resource type: %s, expected: %s or %s", resourceType, ResourceTypeConfigMap, ResourceTypeSecret)
+		return k8sTarget{}, fmt.Errorf("unsupported resource type: %s, expected: %s or %s", resourceType, ResourceTypeConfigMap, ResourceTypeSecret)
 	}
 
 	// Parse path: /{namespace}/{name}[/{key}]
@@ -82,7 +110,7 @@ func NewK8SReader(uri string) (*K8SReader, error) {
 	path := strings.TrimPrefix(u.Path, "/")
 	parts := strings.Split(path, "/")
 	if len(parts) < 2 {
-		return nil, fmt.Errorf("invalid k8s URI path, expected format: k8s://{resourceType}/{namespace}/{name}[/{key}]")
+		return k8sTarget{}, fmt.Errorf("invalid k8s URI path, expected format: k8s://{resourceType}/{namespace}/{name}[/{key}]")
 	}
 
 	namespace := parts[0]
@@ -92,19 +120,11 @@ func NewK8SReader(uri string) (*K8SReader, error) {
 		key = parts[2]
 	}
 
-	// Create k8s client
-	clientset, err := createK8SClient()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create k8s client: %w", err)
-	}
-
-	return &K8SReader{
-		uri:          uri,
+	return k8sTarget{
 		resourceType: resourceType,
 		namespace:    namespace,
 		name:         name,
 		key:          key,
-		clientset:    clientset,
 	}, nil
 }
 
