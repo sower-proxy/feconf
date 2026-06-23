@@ -11,7 +11,7 @@ A flexible and comfortable, URI-based configuration management library for Go wi
 
 ## Features
 
-- **Multi-protocol**: File, HTTP, WebSocket, Redis, Kubernetes
+- **Multi-protocol**: File, HTTP, WebSocket, Redis, Kubernetes, Nacos
 - **Multi-format**: JSON, YAML, INI, TOML, XML
 - **Real-time updates**: Subscribe to configuration changes
 - **Type-safe**: Strong struct mapping with mapstructure
@@ -67,6 +67,9 @@ loader := feconf.New[Config]("wss://realtime.example.com/config")
 
 // Kubernetes
 loader := feconf.New[Config]("k8s://configmap/default/app-config")
+
+// Nacos
+loader := feconf.New[Config]("nacos://127.0.0.1:8848/DEFAULT_GROUP/app.yaml?namespace=public")
 ```
 
 ## Supported Formats
@@ -166,7 +169,16 @@ Common parameters:
 - `timeout` - Request/operation timeout
 - `retry_attempts` - Number of retries
 
-Protocol-specific parameters available for HTTP, Redis, and WebSocket connections.
+Protocol-specific parameters available for HTTP, Redis, WebSocket, Kubernetes, and Nacos connections.
+
+Nacos URI format:
+
+```text
+nacos://host:port/{group}/{dataId}?namespace=public&username=nacos&password=nacos&content-type=application/yaml
+```
+
+Nacos supports `timeout`, `listen_timeout`, `retry_delay`, `server_scheme`,
+`context_path`, and `tls_insecure` connection options.
 
 ## Installation
 

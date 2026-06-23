@@ -32,7 +32,7 @@ Location: `reader/`
 Responsibilities:
 
 - parse reader URIs
-- fetch raw configuration bytes from file, HTTP, Redis, Kubernetes, and other backends
+- fetch raw configuration bytes from file, HTTP, Redis, Kubernetes, Nacos, and other backends
 - expose subscription/update capabilities when the backend supports them
 
 ### Decoder Layer
