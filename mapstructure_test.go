@@ -825,8 +825,10 @@ func TestDefaultHook(t *testing.T) {
 			fromType: reflect.TypeOf((*testStruct)(nil)),
 			toType:   reflect.TypeOf((*testStruct)(nil)),
 			data:     (*testStruct)(nil),
-			want:     nil,
-			wantErr:  false,
+			// 必须返回带类型的 nil 指针：无类型 nil 会让链上的下一个 Hook 在
+			// reflect.Value.Type() 上 panic。
+			want:    (*testStruct)(nil),
+			wantErr: false,
 		},
 	}
 
@@ -1084,6 +1086,58 @@ func TestDefaultHookWithStruct(t *testing.T) {
 			}
 			if config != tt.expected {
 				t.Errorf("Decode() = %v, want %v", config, tt.expected)
+			}
+		})
+	}
+}
+
+// HookFuncDefault 的返回值会被 mapstructure 的 ComposeDecodeHookFunc 包成
+// reflect.Value 后交给链上的下一个 Hook。若它在“零值 + 目标为指针/切片/映射”时返回
+// 无类型的 nil，下一个 Hook 会拿到无效的 reflect.Value 并在 .Type() 上 panic：
+//
+//	panic: reflect: call of reflect.Value.Type on zero Value
+//
+// 复现输入：把空字符串赋给 []string / map / 指针字段。
+func TestDefaultHookComposedWithFollowingHookDoesNotPanic(t *testing.T) {
+	type target struct {
+		Sentinels []string          `json:"sentinels"`
+		Labels    map[string]string `json:"labels"`
+		Enabled   *bool             `json:"enabled"`
+		Count     int               `json:"count"`
+	}
+
+	// 第二个 Hook 模拟 DefaultParserConfig 里排在 HookFuncDefault 之后的钩子。
+	follow := mapstructure.DecodeHookFuncType(func(_ reflect.Type, _ reflect.Type, data any) (any, error) {
+		return data, nil
+	})
+
+	tests := []struct {
+		name string
+		raw  map[string]any
+	}{
+		{name: "empty string to slice", raw: map[string]any{"sentinels": ""}},
+		{name: "empty string to map", raw: map[string]any{"labels": ""}},
+		{name: "empty string to pointer", raw: map[string]any{"enabled": ""}},
+		{name: "empty string to int", raw: map[string]any{"count": ""}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var decoded target
+			cfg := DefaultParserConfig
+			cfg.DecodeHook = mapstructure.ComposeDecodeHookFunc(HookFuncDefault(), follow)
+			cfg.Result = &decoded
+			decoder, err := mapstructure.NewDecoder(&cfg)
+			if err != nil {
+				t.Fatalf("NewDecoder() error = %v", err)
+			}
+			// 这里必须不 panic。
+			if err := decoder.Decode(tt.raw); err != nil {
+				t.Fatalf("Decode(%v) error = %v", tt.raw, err)
+			}
+			// 零值输入应落到目标类型的零值上。
+			if !reflect.DeepEqual(decoded, target{}) {
+				t.Fatalf("Decode(%v) = %#v, want zero value", tt.raw, decoded)
 			}
 		})
 	}

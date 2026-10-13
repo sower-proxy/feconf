@@ -273,7 +273,14 @@ func isZeroValue(data any) bool {
 	}
 }
 
-// getDefaultValue 根据类型返回默认值
+// getDefaultValue 根据类型返回默认值。
+//
+// 必须返回**带类型的零值**：HookFuncDefault 的返回值会被 mapstructure 的
+// ComposeDecodeHookFunc 用 reflect.ValueOf(data) 包好后交给链上的下一个 Hook；
+// 返回无类型 nil 时下一个 Hook 会拿到无效的 reflect.Value，并在 .Type() 上 panic
+// （例如把空字符串赋给 []string / map / 指针字段）。
+//
+// 例外：interface 类型的零值只能是无类型 nil，这类目标仍会得到 nil。
 func getDefaultValue(t reflect.Type) any {
 	switch t.Kind() {
 	case reflect.String:
@@ -286,12 +293,10 @@ func getDefaultValue(t reflect.Type) any {
 		return float64(0)
 	case reflect.Bool:
 		return false
-	case reflect.Pointer, reflect.Slice, reflect.Map, reflect.Interface:
+	case reflect.Interface:
 		return nil
-	case reflect.Struct:
-		// 对于结构体，返回零值
-		return reflect.Zero(t).Interface()
 	default:
-		return nil
+		// 指针 / 切片 / 映射 / 结构体 / 函数 / 通道 / 数组：带类型的零值。
+		return reflect.Zero(t).Interface()
 	}
 }
