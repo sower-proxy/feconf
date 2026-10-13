@@ -13,7 +13,10 @@ jobs:
 
     strategy:
       matrix:
-        go-version: [1.24.x, 1.25.x]
+        # go.mod requires go >= 1.26.0 and setup-go sets GOTOOLCHAIN=local, so
+        # anything below 1.26.x fails at `go mod download`. Track the oldest
+        # supported version plus the newest stable one.
+        go-version: [1.26.x, 1.27.x]
 
     steps:
       - name: Checkout code
@@ -65,7 +68,7 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
-          file: ./coverage.out
+          files: ./coverage.out
           flags: unittests
           name: codecov-umbrella
           fail_ci_if_error: false
@@ -73,7 +76,9 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v8
         with:
-          version: latest
+          # Pinned: builds older than v2.14.0 cannot decode Go 1.27 export data
+          # (version 5) and fail this step with typecheck errors.
+          version: v2.14.0
           args: --timeout=5m --disable=errcheck
 
   security:
@@ -87,7 +92,11 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: 1.25.x
+          # Deliberately the oldest supported Go: gosec (v2.29.0) bundles a
+          # golang.org/x/tools that cannot decode Go 1.27 export data, so every
+          # package reports type errors and the scan exits 1 without findings.
+          # Bump this once gosec supports Go 1.27.
+          go-version: 1.26.x
 
       - name: Run Gosec Scan
         run: |
