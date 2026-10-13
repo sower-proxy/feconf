@@ -53,7 +53,9 @@ func (c *ConfOpt[T]) parseUri() error {
 	}
 
 	if c.uri != c.originalURI && c.reader != nil {
-		c.reader.Close()
+		if err := c.reader.Close(); err != nil {
+			return fmt.Errorf("close superseded reader: %w", err)
+		}
 		c.reader = nil
 	}
 
