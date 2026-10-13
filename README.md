@@ -1,6 +1,6 @@
 # feconf
 
-[![Go Version](https://img.shields.io/badge/go-%3E%3D1.24-blue.svg)](https://golang.org/)
+[![Go Version](https://img.shields.io/badge/go-%3E%3D1.26-blue.svg)](https://golang.org/)
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/sower-proxy/feconf/test.yml?branch=main)](https://github.com/sower-proxy/feconf/actions/workflows/test.yml)
 [![Test Coverage](https://img.shields.io/badge/coverage-92%25-brightgreen.svg)](https://github.com/sower-proxy/feconf/actions/workflows/test.yml)
