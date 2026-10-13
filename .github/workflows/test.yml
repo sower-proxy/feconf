@@ -3,6 +3,8 @@ name: Test and Lint
 on:
   push:
     branches: [main, develop]
+    # Release tags get verified too: nothing else gates a tag push.
+    tags: ['v*']
   pull_request:
     branches: [main, develop]
 
@@ -41,6 +43,9 @@ jobs:
 
       - name: Download dependencies
         run: go mod download
+
+      - name: Check go.mod is tidy
+        run: go mod tidy -diff
 
       - name: Run go vet
         run: go vet ./...
@@ -107,3 +112,49 @@ jobs:
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: "gosec.sarif"
+
+  modules:
+    name: Nested Modules (${{ matrix.module }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # Root `./...` walks none of these modules, so without this job their
+        # go.mod drift and broken builds reach main unnoticed.
+        module:
+          - reader/k8s
+          - examples/file-json
+          - examples/file-xml
+          - examples/flags
+          - examples/http-yaml
+          - examples/k8s-yaml
+          - examples/redis-hash
+          - examples/redis-ini
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: 1.26.x
+          cache: true
+          cache-dependency-path: ${{ matrix.module }}/go.sum
+
+      - name: Check go.mod is tidy
+        working-directory: ${{ matrix.module }}
+        run: go mod tidy -diff
+
+      - name: Build
+        working-directory: ${{ matrix.module }}
+        run: go build ./...
+
+      - name: Run go vet
+        working-directory: ${{ matrix.module }}
+        run: go vet ./...
+
+      - name: Run tests
+        working-directory: ${{ matrix.module }}
+        run: go test ./...
