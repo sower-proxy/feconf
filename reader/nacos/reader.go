@@ -83,10 +83,12 @@ func NewNacosReader(uri string) (*NacosReader, error) {
 	}
 
 	transport := &http.Transport{}
+	// tls_insecure=true is an explicit caller opt-in for endpoints using
+	// self-signed or otherwise unverifiable certificates.
 	if u.Query().Get("tls_insecure") == "true" {
 		transport.TLSClientConfig = &tls.Config{
 			MinVersion:         tls.VersionTLS12,
-			InsecureSkipVerify: true,
+			InsecureSkipVerify: true, // #nosec G402 -- gated by the tls_insecure URI parameter
 		}
 	}
 
